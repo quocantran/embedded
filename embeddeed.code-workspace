@@ -3,6 +3,9 @@
 		{
 			"name": "embeddeed",
 			"path": "."
+		},
+		{
+			"path": "../embeddeed - Copy"
 		}
 	]
 }

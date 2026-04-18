@@ -23,7 +23,15 @@
 
 // --- Chân điều khiển ---
 #define PIN_RELAY           18      // GPIO18 - Chân điều khiển relay bơm nước
-#define PIN_BUTTON          4       // GPIO4  - Chân nút nhấn (kéo lên nội bộ, nối GND)
+#define PIN_BUTTON_D4       4       // GPIO4  - Nút nhấn ngoài (dang bi nhieu tren board hien tai)
+#define PIN_BUTTON_BOOT     0       // GPIO0  - Nút BOOT onboard (debug on dinh)
+#define USE_BOOT_BUTTON_DBG 1       // 1: dung BOOT de test, 0: dung D4
+#if USE_BOOT_BUTTON_DBG
+#define PIN_BUTTON          PIN_BUTTON_BOOT
+#else
+#define PIN_BUTTON          PIN_BUTTON_D4
+#endif
+#define PIN_STATUS_LED      2       // GPIO2  - LED onboard de test nhanh nut nhan
 
 // --- Địa chỉ I2C các thiết bị ---
 #define LCD_I2C_ADDR        0x27    // Địa chỉ LCD I2C 16x2
@@ -35,7 +43,7 @@
 #define SENSOR_READ_INTERVAL_MS 2000    // Chu kỳ đọc cảm biến: 2 giây
 #define LCD_UPDATE_INTERVAL_MS  500     // Chu kỳ cập nhật LCD: 500ms
 #define LCD_BLINK_INTERVAL_MS   300     // Tốc độ nhấp nháy cảnh báo LCD: 300ms
-#define BUTTON_DEBOUNCE_MS      50      // Thời gian chống rung nút nhấn: 50ms
+#define BUTTON_DEBOUNCE_MS      20      // Chống rung nút nhấn: 20ms (de nhan nut thuc te hon)
 #define BUTTON_LONG_PRESS_MS    3000    // Nhấn giữ >= 3 giây = long press
 
 // ============================================================
@@ -87,7 +95,7 @@
 // ============================================================
 // CẤU HÌNH WIFI STATION (kết nối vào WiFi nhà)
 // ============================================================
-#define WIFI_STA_SSID           "Sua wifi"       // Tên WiFi nhà
+#define WIFI_STA_SSID           "Minh An"       // Tên WiFi nhà
 #define WIFI_STA_PASS           "88888888"       // Mật khẩu WiFi
 #define WIFI_CONNECT_TIMEOUT_MS 15000            // Timeout kết nối WiFi: 15 giây
 #define WEB_SERVER_PORT         80               // Cổng web server

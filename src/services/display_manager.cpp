@@ -34,8 +34,18 @@ void DisplayManager::update(const SensorData &sensors, OperationMode mode,
                             const String &ipAddress, uint8_t dangerThreshold) {
     if (!_lcd) return;
 
-    // Giới hạn tốc độ cập nhật LCD
     unsigned long now = millis();
+
+    // Hien thi thong bao tam thoi (uu tien cao) de thay doi ro rang khi bam nut
+    if (now < _tempMsgUntil) {
+        _lcd->stopBlink();
+        _lcd->printLine(0, _tempLine0);
+        _lcd->printLine(1, _tempLine1);
+        _lcd->updateBlink();
+        return;
+    }
+
+    // Giới hạn tốc độ cập nhật LCD
     if (now - _lastUpdateTime < LCD_UPDATE_INTERVAL_MS) {
         _lcd->updateBlink(); // Vẫn cập nhật blink
         return;
@@ -150,4 +160,16 @@ void DisplayManager::_showError(ErrorCode error) {
     }
 
     _lcd->printLine(1, errMsg);
+}
+
+// ============================================================
+// Hien thong bao tam thoi tren LCD
+// ============================================================
+void DisplayManager::showTemporaryMessage(const String &line0, const String &line1,
+                                          unsigned long durationMs) {
+    if (!_lcd) return;
+
+    _tempLine0 = line0;
+    _tempLine1 = line1;
+    _tempMsgUntil = millis() + durationMs;
 }

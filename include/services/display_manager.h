@@ -44,9 +44,21 @@ public:
                 SystemState state, bool pumpOn, ErrorCode error,
                 const String &ipAddress, uint8_t dangerThreshold);
 
+    /**
+     * @brief Hien thong bao tam thoi de debug/trang thai
+     * @param line0 Dong 0 LCD
+     * @param line1 Dong 1 LCD
+     * @param durationMs Thoi gian hien thi (ms)
+     */
+    void showTemporaryMessage(const String &line0, const String &line1,
+                              unsigned long durationMs = 1200);
+
 private:
     LcdDriver *_lcd = nullptr;
     unsigned long _lastUpdateTime = 0;
+    unsigned long _tempMsgUntil = 0;
+    String _tempLine0 = "";
+    String _tempLine1 = "";
 
     /**
      * @brief Hiển thị trang chính: Giờ + Nhiệt độ + Ẩm đất + Chế độ

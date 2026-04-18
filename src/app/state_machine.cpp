@@ -44,6 +44,10 @@ bool StateMachine::init() {
     _buttonDriver.init();
     _lcdDriver.init();
 
+    // LED onboard de test nhanh nut nhan
+    pinMode(PIN_STATUS_LED, OUTPUT);
+    digitalWrite(PIN_STATUS_LED, LOW);
+
     // RTC
     if (!_rtcDriver.init()) {
         Serial.println(F("[INIT] CANH BAO: RTC loi - tiep tuc khong co RTC"));
@@ -75,6 +79,7 @@ bool StateMachine::init() {
     _currentError = ErrorCode::NONE;
 
     Serial.println(F("\n[INIT] He thong san sang!\n"));
+    Serial.println(F("[INIT] LED onboard san sang de test nut nhan"));
 
     // Hiển thị trên LCD sau 2 giây
     delay(1500);
@@ -87,10 +92,17 @@ bool StateMachine::init() {
 // Chạy 1 chu kỳ state machine (gọi mỗi loop)
 // ============================================================
 void StateMachine::update() {
+    // Test truc quan nhu code mau: nhan nut (LOW) thi LED onboard sang
+    bool isButtonPressed = (digitalRead(PIN_BUTTON) == LOW);
+    digitalWrite(PIN_STATUS_LED, isButtonPressed ? HIGH : LOW);
+
     // ─── Luôn cập nhật nút nhấn ───
     _buttonDriver.update();
     ButtonEvent event = _buttonDriver.getEvent();
     if (event != ButtonEvent::NONE) {
+        Serial.printf("[SM] Nhan duoc ButtonEvent=%s, mode hien tai=%d\n",
+                      event == ButtonEvent::LONG_PRESS ? "LONG_PRESS" : "SHORT_PRESS",
+                      (int)_mode);
         handleButtonEvent(event);
     }
 
@@ -153,12 +165,14 @@ void StateMachine::handleButtonEvent(ButtonEvent event) {
             _relayDriver.off(); // Tắt bơm an toàn
             _mode = OperationMode::AUTO;
             _manualDangerStartTime = 0;
+            _displayManager.showTemporaryMessage("MODE CHANGED", "MANUAL -> AUTO");
         } else {
             // Đang AUTO/SCHEDULE → vào MANUAL
             Serial.println(F("[SM] Nut giu: → MANUAL"));
             _mode = OperationMode::MANUAL;
             _manualStartTime = millis();
             _manualDangerStartTime = 0;
+            _displayManager.showTemporaryMessage("MODE CHANGED", "TO MANUAL");
         }
         // Lưu chế độ vào config
         _configManager.getConfigMutable().mode = (uint8_t)_mode;
@@ -169,9 +183,11 @@ void StateMachine::handleButtonEvent(ButtonEvent event) {
             // ─── SHORT PRESS trong MANUAL: Toggle bơm ───
             Serial.println(F("[SM] Nut ngan: Toggle bom (MANUAL)"));
             _relayDriver.toggle();
+            _displayManager.showTemporaryMessage("BUTTON SHORT", _relayDriver.isOn() ? "PUMP: ON" : "PUMP: OFF");
         } else {
             // ─── SHORT PRESS ngoài MANUAL: Không làm gì (LCD 1 trang) ───
             Serial.println(F("[SM] Nut ngan: Khong o MANUAL - bo qua"));
+            _displayManager.showTemporaryMessage("BUTTON SHORT", "HOLD 3S MANUAL");
         }
     }
 }
