@@ -1,34 +1,11 @@
-/**
- * @file display_manager.cpp
- * @brief Triển khai hiển thị LCD đơn giản + cảnh báo khẩn
- * 
- * Bình thường:
- * ┌────────────────┐
- * │ HH:MM  TT°C    │
- * │ D:XX% M:auto    │
- * └────────────────┘
- * 
- * Khi đất < ngưỡng nguy hiểm:
- * ┌────────────────┐
- * │TUOI NUOC NGAY! │
- * │DAT QUA KHO!    │
- * └────────────────┘
- * + đèn nền nhấp nháy
- */
 
 #include "services/display_manager.h"
 
-// ============================================================
-// Khởi tạo
-// ============================================================
 void DisplayManager::init(LcdDriver &lcd) {
     _lcd = &lcd;
     _lastUpdateTime = 0;
 }
 
-// ============================================================
-// Cập nhật hiển thị LCD
-// ============================================================
 void DisplayManager::update(const SensorData &sensors, OperationMode mode,
                             SystemState state, bool pumpOn, ErrorCode error,
                             const String &ipAddress, uint8_t dangerThreshold) {
@@ -74,11 +51,6 @@ void DisplayManager::update(const SensorData &sensors, OperationMode mode,
     _lcd->updateBlink();
 }
 
-// ============================================================
-// Trang chính: Giờ + Nhiệt độ + Ẩm đất + Mode
-// Hàng 0: "HH:MM  TT°C"
-// Hàng 1: "D:XX% M:auto/schedule/manual"
-// ============================================================
 void DisplayManager::_showMain(const SensorData &sensors, OperationMode mode) {
     // ─── Hàng 0: Giờ + Nhiệt độ ───
     String line0 = "";
@@ -132,19 +104,11 @@ void DisplayManager::_showMain(const SensorData &sensors, OperationMode mode) {
     _lcd->printLine(1, line1);
 }
 
-// ============================================================
-// Cảnh báo đất khô
-// Hàng 0: "TUOI NUOC NGAY!"
-// Hàng 1: "DAT QUA KHO!"
-// ============================================================
 void DisplayManager::_showDroughtAlert() {
     _lcd->printLine(0, "TUOI NUOC NGAY!");
     _lcd->printLine(1, "DAT QUA KHO!");
 }
 
-// ============================================================
-// Hiển thị lỗi
-// ============================================================
 void DisplayManager::_showError(ErrorCode error) {
     _lcd->printLine(0, "LOI HE THONG!");
 
@@ -162,9 +126,6 @@ void DisplayManager::_showError(ErrorCode error) {
     _lcd->printLine(1, errMsg);
 }
 
-// ============================================================
-// Hien thong bao tam thoi tren LCD
-// ============================================================
 void DisplayManager::showTemporaryMessage(const String &line0, const String &line1,
                                           unsigned long durationMs) {
     if (!_lcd) return;

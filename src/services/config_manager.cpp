@@ -1,22 +1,6 @@
-/**
- * @file config_manager.cpp
- * @brief Triển khai quản lý cấu hình hệ thống qua EEPROM AT24C32
- * 
- * Cấu trúc EEPROM:
- * [0x0000] Magic byte (0xAB) - xác nhận dữ liệu hợp lệ
- * [0x0001] Version (0x01) - phiên bản cấu trúc
- * [0x0002] CRC8 config - kiểm tra toàn vẹn
- * [0x0010] SystemConfig struct
- * [0x0040] ScheduleEntry[4] 
- * [0x0060] RuntimeData struct
- * [0x0080] AdaptiveData struct
- */
 
 #include "services/config_manager.h"
 
-// ============================================================
-// Khởi tạo config manager
-// ============================================================
 void ConfigManager::init(EepromDriver &eeprom) {
     _eeprom = &eeprom;
 
@@ -50,9 +34,6 @@ void ConfigManager::init(EepromDriver &eeprom) {
                   _config.mode);
 }
 
-// ============================================================
-// Tải cấu hình từ EEPROM
-// ============================================================
 bool ConfigManager::loadConfig() {
     if (!_eeprom) return false;
 
@@ -72,9 +53,6 @@ bool ConfigManager::loadConfig() {
     return true;
 }
 
-// ============================================================
-// Lưu cấu hình vào EEPROM
-// ============================================================
 void ConfigManager::saveConfig() {
     if (!_eeprom) return;
 
@@ -87,9 +65,6 @@ void ConfigManager::saveConfig() {
     Serial.println(F("[CONFIG] Luu cau hinh vao EEPROM"));
 }
 
-// ============================================================
-// Reset về mặc định nhà máy
-// ============================================================
 void ConfigManager::resetDefaults() {
     _config.soilDryRaw = DEFAULT_SOIL_DRY_RAW;
     _config.soilWetRaw = DEFAULT_SOIL_WET_RAW;
@@ -122,9 +97,6 @@ void ConfigManager::resetDefaults() {
     Serial.println(F("[CONFIG] Da reset ve mac dinh"));
 }
 
-// ============================================================
-// Getter cấu hình
-// ============================================================
 const SystemConfig& ConfigManager::getConfig() const {
     return _config;
 }
@@ -133,9 +105,6 @@ SystemConfig& ConfigManager::getConfigMutable() {
     return _config;
 }
 
-// ============================================================
-// Quản lý lịch tưới
-// ============================================================
 void ConfigManager::loadSchedules() {
     if (!_eeprom) return;
     for (int i = 0; i < MAX_SCHEDULES; i++) {
@@ -158,9 +127,6 @@ ScheduleEntry* ConfigManager::getSchedules() {
     return _schedules;
 }
 
-// ============================================================
-// Quản lý dữ liệu runtime
-// ============================================================
 void ConfigManager::loadRuntime() {
     if (!_eeprom) return;
     _eeprom->readStruct(EEPROM_ADDR_RUNTIME, _runtime);
@@ -192,9 +158,6 @@ const RuntimeData& ConfigManager::getRuntime() const {
     return _runtime;
 }
 
-// ============================================================
-// Quản lý dữ liệu adaptive
-// ============================================================
 void ConfigManager::loadAdaptive() {
     if (!_eeprom) return;
     _eeprom->readStruct(EEPROM_ADDR_ADAPTIVE, _adaptive);
@@ -225,9 +188,6 @@ const AdaptiveData& ConfigManager::getAdaptive() const {
     return _adaptive;
 }
 
-// ============================================================
-// Private: Kiểm tra EEPROM có dữ liệu hợp lệ không
-// ============================================================
 bool ConfigManager::_isEepromValid() {
     if (!_eeprom) return false;
 
@@ -240,9 +200,6 @@ bool ConfigManager::_isEepromValid() {
     return (magic == EEPROM_MAGIC_BYTE && version == EEPROM_DATA_VERSION);
 }
 
-// ============================================================
-// Private: Ghi header vào EEPROM
-// ============================================================
 void ConfigManager::_writeHeader() {
     if (!_eeprom) return;
     _eeprom->writeByte(EEPROM_ADDR_MAGIC, EEPROM_MAGIC_BYTE);

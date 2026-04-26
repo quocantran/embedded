@@ -1,18 +1,6 @@
-/**
- * @file scheduler_service.cpp
- * @brief Triển khai dịch vụ lịch tưới theo thời gian
- * 
- * Khi lịch kích hoạt, KHÔNG tưới mù quáng mà điều chỉnh theo thực tế:
- * - Đất > ngưỡng cao → bỏ qua (đất đã đủ ẩm)
- * - Giữa 2 ngưỡng → tưới 50% thời gian gợi ý
- * - Đất < ngưỡng thấp → tưới 100% thời gian gợi ý
- */
 
 #include "services/scheduler_service.h"
 
-// ============================================================
-// Kiểm tra tất cả lịch tưới
-// ============================================================
 IrrigationDecision SchedulerService::checkSchedules(
     const SensorData &sensors,
     const ScheduleEntry schedules[MAX_SCHEDULES],
@@ -86,9 +74,6 @@ IrrigationDecision SchedulerService::checkSchedules(
     return decision;
 }
 
-// ============================================================
-// Reset cờ cho ngày mới
-// ============================================================
 void SchedulerService::resetDailyFlags() {
     for (int i = 0; i < MAX_SCHEDULES; i++) {
         _triggered[i] = false;
@@ -97,9 +82,6 @@ void SchedulerService::resetDailyFlags() {
     Serial.println(F("[LICH] Reset co lich tuoi cho ngay moi"));
 }
 
-// ============================================================
-// Private: Kiểm tra 1 lịch cụ thể có cần kích hoạt không
-// ============================================================
 bool SchedulerService::_shouldTrigger(const ScheduleEntry &entry, uint8_t hour,
                                        uint8_t minute, uint8_t dayOfWeek, 
                                        uint8_t index) {
@@ -119,9 +101,6 @@ bool SchedulerService::_shouldTrigger(const ScheduleEntry &entry, uint8_t hour,
     return true; // Tất cả điều kiện khớp → kích hoạt!
 }
 
-// ============================================================
-// Private: Điều chỉnh thời gian tưới theo độ ẩm đất
-// ============================================================
 uint16_t SchedulerService::_adjustDuration(uint16_t requestedSec, int soilPercent,
                                             const SystemConfig &config) {
     // Đất đã đủ ẩm → không tưới

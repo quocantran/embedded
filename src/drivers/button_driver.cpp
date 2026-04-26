@@ -1,30 +1,9 @@
-/**
- * @file button_driver.cpp
- * @brief Triển khai driver nút nhấn với debounce và phát hiện long press
- * 
- * Thuật toán debounce:
- * 1. Đọc trạng thái thô từ GPIO
- * 2. Nếu thay đổi so với lần đọc trước → reset timer debounce
- * 3. Nếu timer debounce >= 50ms → trạng thái ổn định
- * 4. Phát hiện cạnh lên/xuống từ trạng thái ổn định
- * 
- * Phát hiện sự kiện:
- * - LONG_PRESS: phát hiện ngay khi nhấn giữ >= 3 giây (không cần thả)
- * - SHORT_PRESS: phát hiện khi thả nút (chỉ nếu chưa phải long press)
- * 
- * Kết nối phần cứng:
- *   ESP32 GPIO4 ──── [NÚT NHẤN] ──── GND
- *   (Internal pull-up bật, nhấn = LOW, thả = HIGH)
- */
 
 #include "drivers/button_driver.h"
 
 static const uint8_t BUTTON_FILTER_MAX = 8;
 static const uint8_t BUTTON_SAMPLE_INTERVAL_MS = 2;
 
-// ============================================================
-// Khởi tạo nút nhấn
-// ============================================================
 void ButtonDriver::init() {
     // INPUT_PULLUP: kéo lên nội bộ, nút nối GND
     pinMode(PIN_BUTTON, INPUT_PULLUP);
@@ -42,9 +21,6 @@ void ButtonDriver::init() {
     Serial.printf("[BUTTON] Trang thai ban dau RAW=%s\n", _lastRawState == LOW ? "LOW(PRESSED)" : "HIGH(RELEASED)");
 }
 
-// ============================================================
-// Cập nhật trạng thái nút nhấn (GỌI MỖI VÒNG LOOP)
-// ============================================================
 void ButtonDriver::update() {
     unsigned long now = millis();
 
@@ -123,9 +99,6 @@ void ButtonDriver::update() {
     }
 }
 
-// ============================================================
-// Lấy sự kiện và xóa sự kiện đang chờ
-// ============================================================
 ButtonEvent ButtonDriver::getEvent() {
     ButtonEvent event = _pendingEvent;
     if (event == ButtonEvent::SHORT_PRESS) {

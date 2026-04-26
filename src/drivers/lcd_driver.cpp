@@ -1,13 +1,3 @@
-/**
- * @file lcd_driver.cpp
- * @brief Triển khai driver LCD I2C 16x2 với ký tự tùy chỉnh và nhấp nháy
- * 
- * Ký tự tùy chỉnh 5x8 pixel:
- * - CHAR_PUMP (0): Icon máy bơm
- * - CHAR_DROP (1): Icon giọt nước
- * - CHAR_SUN  (2): Icon mặt trời
- * - CHAR_WARN (3): Icon cảnh báo tam giác
- */
 
 #include "drivers/lcd_driver.h"
 
@@ -57,9 +47,6 @@ static const uint8_t WARN_CHAR[8] PROGMEM = {
     0b00000   //
 };
 
-// ============================================================
-// Khởi tạo LCD
-// ============================================================
 void LcdDriver::init() {
     _lcd.init();
     _lcd.backlight();
@@ -77,18 +64,12 @@ void LcdDriver::init() {
     Serial.println(F("[LCD] Khoi tao LCD thanh cong"));
 }
 
-// ============================================================
-// In text tại vị trí cụ thể
-// ============================================================
 void LcdDriver::printAt(uint8_t col, uint8_t row, const String &text) {
     if (row > 1 || col > 15) return;
     _lcd.setCursor(col, row);
     _lcd.print(text);
 }
 
-// ============================================================
-// In text trên toàn bộ 1 hàng (tự pad khoảng trắng để xóa ký tự cũ)
-// ============================================================
 void LcdDriver::printLine(uint8_t row, const String &text) {
     if (row > 1) return;
 
@@ -102,23 +83,14 @@ void LcdDriver::printLine(uint8_t row, const String &text) {
     _lcd.print(padded.substring(0, LCD_COLS));
 }
 
-// ============================================================
-// Xóa 1 hàng
-// ============================================================
 void LcdDriver::clearLine(uint8_t row) {
     printLine(row, "");
 }
 
-// ============================================================
-// Xóa toàn bộ LCD
-// ============================================================
 void LcdDriver::clear() {
     _lcd.clear();
 }
 
-// ============================================================
-// Bật nhấp nháy cảnh báo
-// ============================================================
 void LcdDriver::startBlink() {
     if (!_blinking) {
         _blinking = true;
@@ -127,9 +99,6 @@ void LcdDriver::startBlink() {
     }
 }
 
-// ============================================================
-// Tắt nhấp nháy, bật backlight cố định
-// ============================================================
 void LcdDriver::stopBlink() {
     if (_blinking) {
         _blinking = false;
@@ -139,9 +108,6 @@ void LcdDriver::stopBlink() {
     }
 }
 
-// ============================================================
-// Cập nhật nhấp nháy (gọi trong loop - non-blocking)
-// ============================================================
 void LcdDriver::updateBlink() {
     if (!_blinking) return;
 
@@ -158,18 +124,12 @@ void LcdDriver::updateBlink() {
     }
 }
 
-// ============================================================
-// In ký tự tùy chỉnh
-// ============================================================
 void LcdDriver::printCustomChar(uint8_t col, uint8_t row, uint8_t charIndex) {
     if (row > 1 || col > 15 || charIndex > 7) return;
     _lcd.setCursor(col, row);
     _lcd.write(charIndex);
 }
 
-// ============================================================
-// Private: Tạo ký tự tùy chỉnh từ PROGMEM
-// ============================================================
 void LcdDriver::_createCustomChars() {
     uint8_t buffer[8];
 

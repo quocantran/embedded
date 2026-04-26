@@ -1,27 +1,6 @@
-/**
- * @file irrigation_service.cpp
- * @brief Triển khai engine quyết định tưới đa yếu tố
- * 
- * Bảng quyết định:
- * ┌──────────────┬───────────┬──────────┬──────────┬──────────────┐
- * │ Đất (%)      │ Nhiệt độ │ Ẩm KK   │ Giờ      │ Quyết định   │
- * ├──────────────┼───────────┼──────────┼──────────┼──────────────┤
- * │ < 20%        │ > 35°C   │ < 40%    │ Sáng/tối │ LONG (6 xung)│
- * │ < 20%        │ bất kỳ   │ bất kỳ   │ 11h-14h  │ DEFER (hoãn) │
- * │ 20-threshold │ 25-35°C  │ < 50%    │ Sáng/tối │ MEDIUM(3 xung)│
- * │ 20-threshold │ bất kỳ   │ > 70%    │ bất kỳ   │ SHORT(1 xung)│
- * │ > threshold  │ bất kỳ   │ bất kỳ   │ bất kỳ   │ NONE         │
- * └──────────────┴───────────┴──────────┴──────────┴──────────────┘
- * 
- * Hysteresis: Chỉ BẮT ĐẦU tưới khi đất < low, DỪNG khi đất > high.
- * Giữa 2 ngưỡng → giữ nguyên trạng thái hiện tại.
- */
 
 #include "services/irrigation_service.h"
 
-// ============================================================
-// Đánh giá tình huống và ra quyết định tưới
-// ============================================================
 IrrigationDecision IrrigationService::evaluate(
     const SensorData &sensors,
     const SystemConfig &config,
@@ -126,9 +105,6 @@ IrrigationDecision IrrigationService::evaluate(
     return decision;
 }
 
-// ============================================================
-// Kiểm tra hysteresis
-// ============================================================
 bool IrrigationService::checkHysteresis(int soilPercent, uint8_t lowThresh,
                                          uint8_t highThresh, bool currentlyWatering) {
     if (soilPercent < lowThresh) {
@@ -143,16 +119,10 @@ bool IrrigationService::checkHysteresis(int soilPercent, uint8_t lowThresh,
     return currentlyWatering;
 }
 
-// ============================================================
-// Private: Kiểm tra có phải giờ trưa không (11h-14h)
-// ============================================================
 bool IrrigationService::_isNoonPeriod(uint8_t hour) {
     return (hour >= 11 && hour <= 14);
 }
 
-// ============================================================
-// Private: Kiểm tra cooldown
-// ============================================================
 bool IrrigationService::_cooldownPassed(uint32_t lastWateringTime, 
                                          uint8_t cooldownMin,
                                          uint32_t currentTime) {
@@ -162,9 +132,6 @@ bool IrrigationService::_cooldownPassed(uint32_t lastWateringTime,
     return (currentTime - lastWateringTime) >= cooldownSec;
 }
 
-// ============================================================
-// Private: Tính mức độ tưới dựa trên đa yếu tố
-// ============================================================
 WateringLevel IrrigationService::_calculateLevel(int soilPercent, float temperature,
                                                    float humidity, uint8_t hour) {
     // ─── Đất RẤT khô (< 20%) ───
@@ -198,9 +165,6 @@ WateringLevel IrrigationService::_calculateLevel(int soilPercent, float temperat
     return WateringLevel::NONE;
 }
 
-// ============================================================
-// Private: Chuyển mức độ → số xung progressive
-// ============================================================
 uint8_t IrrigationService::_levelToPulses(WateringLevel level) {
     switch (level) {
         case WateringLevel::SHORT:  return 2;   // 2 × 30s = 60s

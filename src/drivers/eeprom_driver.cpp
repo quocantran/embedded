@@ -1,21 +1,6 @@
-/**
- * @file eeprom_driver.cpp
- * @brief Triển khai driver EEPROM AT24C32 (4KB) qua I2C
- * 
- * AT24C32 có 4096 bytes, chia thành 128 trang × 32 bytes/trang.
- * Sử dụng địa chỉ 2 byte (0x0000 - 0x0FFF).
- * 
- * Lưu ý quan trọng:
- * - Ghi không được vượt qua ranh giới trang (page boundary)
- * - Sau mỗi lần ghi, phải chờ 5ms (write cycle time)
- * - CRC8 được sử dụng để kiểm tra toàn vẹn dữ liệu
- */
 
 #include "drivers/eeprom_driver.h"
 
-// ============================================================
-// Khởi tạo EEPROM
-// ============================================================
 bool EepromDriver::init() {
     if (_probeAddress()) {
         Serial.printf("[EEPROM] Tim thay AT24C32 tai dia chi 0x%02X\n", _i2cAddr);
@@ -27,9 +12,6 @@ bool EepromDriver::init() {
     return false;
 }
 
-// ============================================================
-// Private: Dò địa chỉ EEPROM AT24C32 (0x50..0x57)
-// ============================================================
 bool EepromDriver::_probeAddress() {
     const uint8_t candidates[] = {EEPROM_I2C_ADDR, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57};
 
@@ -57,9 +39,6 @@ bool EepromDriver::_probeAddress() {
     return false;
 }
 
-// ============================================================
-// Ghi 1 byte
-// ============================================================
 void EepromDriver::writeByte(uint16_t addr, uint8_t data) {
     Wire.beginTransmission(_i2cAddr);
     Wire.write((uint8_t)(addr >> 8));       // Byte cao của địa chỉ
@@ -71,9 +50,6 @@ void EepromDriver::writeByte(uint16_t addr, uint8_t data) {
     delay(EEPROM_WRITE_DELAY_MS);
 }
 
-// ============================================================
-// Đọc 1 byte
-// ============================================================
 uint8_t EepromDriver::readByte(uint16_t addr) {
     // Bước 1: Gửi địa chỉ cần đọc (dummy write)
     Wire.beginTransmission(_i2cAddr);
@@ -89,9 +65,6 @@ uint8_t EepromDriver::readByte(uint16_t addr) {
     return 0xFF; // Giá trị mặc định nếu đọc lỗi
 }
 
-// ============================================================
-// Ghi block dữ liệu (tự động chia page)
-// ============================================================
 void EepromDriver::writeBlock(uint16_t addr, const uint8_t *data, uint16_t len) {
     uint16_t written = 0;
 
@@ -111,9 +84,6 @@ void EepromDriver::writeBlock(uint16_t addr, const uint8_t *data, uint16_t len) 
     }
 }
 
-// ============================================================
-// Đọc block dữ liệu
-// ============================================================
 void EepromDriver::readBlock(uint16_t addr, uint8_t *data, uint16_t len) {
     uint16_t read = 0;
 
@@ -138,9 +108,6 @@ void EepromDriver::readBlock(uint16_t addr, uint8_t *data, uint16_t len) {
     }
 }
 
-// ============================================================
-// Tính CRC8 (polynomial: 0x07 - CRC-8/CCITT)
-// ============================================================
 uint8_t EepromDriver::crc8(const uint8_t *data, uint16_t len) {
     uint8_t crc = 0x00;
 
@@ -158,9 +125,6 @@ uint8_t EepromDriver::crc8(const uint8_t *data, uint16_t len) {
     return crc;
 }
 
-// ============================================================
-// Private: Ghi 1 page EEPROM
-// ============================================================
 void EepromDriver::_writePage(uint16_t addr, const uint8_t *data, uint8_t len) {
     Wire.beginTransmission(_i2cAddr);
     Wire.write((uint8_t)(addr >> 8));

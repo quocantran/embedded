@@ -1,20 +1,6 @@
-/**
- * @file safety_manager.cpp
- * @brief Triển khai quản lý an toàn hệ thống
- * 
- * 5 lớp bảo vệ:
- * 1. Cảm biến lỗi → ERROR state
- * 2. Bơm quá thời gian → tắt bơm cưỡng bức
- * 3. Bơm không hiệu quả → cảnh báo (bơm hỏng/hết nước?)
- * 4. Manual mode timeout → tự về AUTO
- * 5. Đất đủ ẩm → dừng bơm
- */
 
 #include "services/safety_manager.h"
 
-// ============================================================
-// Kiểm tra an toàn cảm biến
-// ============================================================
 ErrorCode SafetyManager::checkSensors(uint8_t dhtFailCount, uint8_t soilFailCount) {
     // DHT lỗi liên tiếp quá giới hạn
     if (dhtFailCount >= SENSOR_FAIL_MAX_COUNT) {
@@ -33,9 +19,6 @@ ErrorCode SafetyManager::checkSensors(uint8_t dhtFailCount, uint8_t soilFailCoun
     return ErrorCode::NONE;
 }
 
-// ============================================================
-// Kiểm tra timeout bơm
-// ============================================================
 bool SafetyManager::checkPumpTimeout(uint32_t pumpOnSec, uint8_t maxPumpTimeMin) {
     uint32_t maxSec = (uint32_t)maxPumpTimeMin * 60;
 
@@ -49,9 +32,6 @@ bool SafetyManager::checkPumpTimeout(uint32_t pumpOnSec, uint8_t maxPumpTimeMin)
     return false;
 }
 
-// ============================================================
-// Kiểm tra hiệu quả bơm
-// ============================================================
 bool SafetyManager::checkPumpEffectiveness(int soilBefore, int soilAfter, 
                                             uint32_t pumpOnSec) {
     // Chỉ kiểm tra sau khi bơm đã chạy đủ lâu (PUMP_FAIL_CHECK_SEC)
@@ -71,9 +51,6 @@ bool SafetyManager::checkPumpEffectiveness(int soilBefore, int soilAfter,
     return false;
 }
 
-// ============================================================
-// Kiểm tra timeout chế độ manual
-// ============================================================
 bool SafetyManager::checkManualTimeout(unsigned long manualStartTime, 
                                         uint8_t timeoutMin) {
     uint32_t timeoutMs = (uint32_t)timeoutMin * 60 * 1000;
@@ -88,9 +65,6 @@ bool SafetyManager::checkManualTimeout(unsigned long manualStartTime,
     return false;
 }
 
-// ============================================================
-// Kiểm tra đất đã đủ ẩm chưa
-// ============================================================
 bool SafetyManager::isSoilWetEnough(int soilPercent, uint8_t highThreshold) {
     if (soilPercent >= highThreshold) {
         Serial.printf("[AN TOAN] Dat du am %d%% >= %d%% → dung bom\n", 
@@ -100,9 +74,6 @@ bool SafetyManager::isSoilWetEnough(int soilPercent, uint8_t highThreshold) {
     return false;
 }
 
-// ============================================================
-// Getter/Setter lỗi
-// ============================================================
 ErrorCode SafetyManager::getLastError() const {
     return _lastError;
 }

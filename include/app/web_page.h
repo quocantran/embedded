@@ -1,17 +1,3 @@
-/**
- * @file web_page.h
- * @brief Trang HTML giao diện web cấu hình - lưu trong PROGMEM (Flash)
- * 
- * Giao diện dark theme, responsive, tích hợp CSS + JS trong 1 file.
- * Sử dụng fetch API để giao tiếp với ESP32.
- * 
- * Tính năng:
- * - Dashboard trạng thái (auto-refresh mỗi 5 giây)
- * - Form cấu hình ngưỡng
- * - Quản lý lịch tưới (4 lịch)
- * - Chuyển chế độ (AUTO/MANUAL/SCHEDULE)
- * - Wizard hiệu chuẩn cảm biến đất
- */
 
 #ifndef WEB_PAGE_H
 #define WEB_PAGE_H

@@ -1,18 +1,6 @@
-/**
- * @file sensor_driver.cpp
- * @brief Triển khai driver cảm biến DHT11 + cảm biến đất analog
- * 
- * Bộ lọc trung bình (moving average) cho cảm biến đất:
- * - Lấy SOIL_SAMPLE_COUNT mẫu liên tiếp
- * - Tính trung bình để loại bỏ nhiễu
- * - Chỉ bắt đầu trả giá trị sau khi đủ mẫu
- */
 
 #include "drivers/sensor_driver.h"
 
-// ============================================================
-// Khởi tạo cảm biến
-// ============================================================
 void SensorDriver::init() {
     // Khởi tạo DHT11
     _dht.begin();
@@ -34,9 +22,6 @@ void SensorDriver::init() {
     Serial.println(F("[SENSOR] Khoi tao cam bien thanh cong"));
 }
 
-// ============================================================
-// Đọc tất cả cảm biến
-// ============================================================
 void SensorDriver::readAll(SensorData &data, uint16_t dryRaw, uint16_t wetRaw) {
     // --- Đọc DHT11 ---
     float t = _dht.readTemperature();
@@ -60,9 +45,6 @@ void SensorDriver::readAll(SensorData &data, uint16_t dryRaw, uint16_t wetRaw) {
     readSoilOnly(data, dryRaw, wetRaw);
 }
 
-// ============================================================
-// Đọc cảm biến đất (dùng riêng khi kiểm tra giữa các xung tưới)
-// ============================================================
 void SensorDriver::readSoilOnly(SensorData &data, uint16_t dryRaw, uint16_t wetRaw) {
     int rawFiltered = _readSoilFiltered();
 
@@ -80,9 +62,6 @@ void SensorDriver::readSoilOnly(SensorData &data, uint16_t dryRaw, uint16_t wetR
     }
 }
 
-// ============================================================
-// Getter cho bộ đếm lỗi
-// ============================================================
 uint8_t SensorDriver::getDhtFailCount() const {
     return _dhtFailCount;
 }
@@ -91,9 +70,6 @@ uint8_t SensorDriver::getSoilFailCount() const {
     return _soilFailCount;
 }
 
-// ============================================================
-// Private: Đọc cảm biến đất với bộ lọc trung bình trượt
-// ============================================================
 int SensorDriver::_readSoilFiltered() {
     // Đọc giá trị ADC thô
     int raw = analogRead(PIN_SOIL);
@@ -119,9 +95,6 @@ int SensorDriver::_readSoilFiltered() {
     return (int)(sum / count);
 }
 
-// ============================================================
-// Private: Chuyển giá trị ADC thô → phần trăm (0-100%)
-// ============================================================
 int SensorDriver::_rawToPercent(int raw, uint16_t dryRaw, uint16_t wetRaw) {
     // Map giá trị ADC: đất khô (4095 ADC) = 0%, đất ướt (1500 ADC) = 100%
     // Lưu ý: ADC nghịch đảo - nước dẫn điện tốt hơn → điện trở giảm → ADC giảm

@@ -1,19 +1,7 @@
-/**
- * @file rtc_driver.cpp
- * @brief Triển khai driver RTC DS1307 + đồng bộ NTP
- * 
- * Ưu tiên thời gian:
- * 1. NTP (internet) → sync lại RTC chip DS1307 luôn
- * 2. RTC (DS1307)   → dùng khi không có internet  
- * 3. Thời gian biên dịch → fallback cuối cùng
- */
 
 #include "drivers/rtc_driver.h"
 #include <time.h>
 
-// ============================================================
-// Khởi tạo RTC
-// ============================================================
 bool RtcDriver::init() {
     if (!_rtc.begin()) {
         Serial.println(F("[RTC] LOI: Khong tim thay DS1307 tren I2C!"));
@@ -38,9 +26,6 @@ bool RtcDriver::init() {
     return true;
 }
 
-// ============================================================
-// Đồng bộ thời gian từ NTP (gọi SAU khi WiFi kết nối)
-// ============================================================
 bool RtcDriver::syncFromNTP() {
     Serial.println(F("[RTC] Dang dong bo NTP..."));
 
@@ -86,10 +71,6 @@ bool RtcDriver::syncFromNTP() {
     return true;
 }
 
-// ============================================================
-// Đọc thời gian vào SensorData
-// Ưu tiên: NTP > RTC
-// ============================================================
 bool RtcDriver::readTime(SensorData &data) {
     // Nếu đã sync NTP → dùng thời gian ESP32 internal (chính xác hơn)
     if (_ntpSynced) {
@@ -135,9 +116,6 @@ bool RtcDriver::readTime(SensorData &data) {
     return true;
 }
 
-// ============================================================
-// Lấy Unix timestamp
-// ============================================================
 uint32_t RtcDriver::getUnixTime() {
     if (_ntpSynced) {
         time_t now;
@@ -148,18 +126,12 @@ uint32_t RtcDriver::getUnixTime() {
     return _rtc.now().unixtime();
 }
 
-// ============================================================
-// Kiểm tra RTC có đang chạy không
-// ============================================================
 bool RtcDriver::isRunning() {
     if (_ntpSynced) return true;
     if (!_initialized) return false;
     return _rtc.isrunning();
 }
 
-// ============================================================
-// Kiểm tra đã sync NTP chưa
-// ============================================================
 bool RtcDriver::isNtpSynced() const {
     return _ntpSynced;
 }

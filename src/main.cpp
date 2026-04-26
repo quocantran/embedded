@@ -1,28 +1,11 @@
-/**
- * @file main.cpp
- * @brief Entry point - Hệ thống tưới tiêu thông minh ESP32
- * 
- * Thứ tự khởi tạo:
- * 1. State Machine (drivers + services)
- * 2. WiFi (kết nối vào WiFi nhà)
- * 3. NTP (đồng bộ giờ thực từ internet → cập nhật RTC chip)
- * 4. Web Server
- * 5. Vòng lặp chính (non-blocking)
- */
 
 #include <Arduino.h>
 #include "app/state_machine.h"
 #include "app/web_server.h"
 
-// ============================================================
-// Đối tượng toàn cục
-// ============================================================
 StateMachine stateMachine;
 WebServerManager webServer;
 
-// ============================================================
-// SETUP
-// ============================================================
 void setup() {
     Serial.begin(115200);
     delay(500);
@@ -63,9 +46,6 @@ void setup() {
     Serial.println(F("\n[MAIN] ========== HE THONG SAN SANG ==========\n"));
 }
 
-// ============================================================
-// LOOP
-// ============================================================
 void loop() {
     stateMachine.update();
     webServer.update();

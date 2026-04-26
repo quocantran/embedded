@@ -1,24 +1,6 @@
-/**
- * @file adaptive_engine.cpp
- * @brief Triển khai engine tưới thích ứng - học từ phản hồi đất
- * 
- * Cách hoạt động:
- * 1. Sau mỗi phiên tưới, ghi nhận: đất tăng bao nhiêu % / giây tưới
- * 2. Tính trung bình trượt (exponential moving average)
- * 3. Nếu phản hồi cao → giảm thời gian tưới (đất hấp thụ tốt)
- * 4. Nếu phản hồi thấp → tăng thời gian tưới (đất cần nhiều nước hơn)
- * 
- * Theo dõi xu hướng khô (dry trend):
- * - Mỗi lần đất giảm so với lần đo trước → tăng counter
- * - Mỗi lần đất tăng → reset counter
- * - Counter > 5 → cảnh báo xu hướng khô
- */
 
 #include "services/adaptive_engine.h"
 
-// ============================================================
-// Ghi nhận kết quả 1 phiên tưới
-// ============================================================
 void AdaptiveEngine::recordSession(int soilBefore, int soilAfter,
                                     uint16_t durationSec, AdaptiveData &adaptive) {
     if (durationSec == 0) return;
@@ -44,9 +26,6 @@ void AdaptiveEngine::recordSession(int soilBefore, int soilAfter,
                   responseRate, adaptive.avgResponseRate);
 }
 
-// ============================================================
-// Điều chỉnh thời gian tưới dựa trên dữ liệu thích ứng
-// ============================================================
 uint16_t AdaptiveEngine::adjustDuration(uint16_t requestedSec, 
                                          const AdaptiveData &adaptive) {
     // Cần ít nhất 3 phiên dữ liệu để bắt đầu điều chỉnh
@@ -76,9 +55,6 @@ uint16_t AdaptiveEngine::adjustDuration(uint16_t requestedSec,
     return requestedSec;
 }
 
-// ============================================================
-// Cập nhật theo dõi xu hướng khô
-// ============================================================
 bool AdaptiveEngine::updateDryTrend(int soilPercent, AdaptiveData &adaptive) {
     if (_lastSoilPercent < 0) {
         // Lần đo đầu tiên → chưa có gì để so sánh
@@ -110,9 +86,6 @@ bool AdaptiveEngine::updateDryTrend(int soilPercent, AdaptiveData &adaptive) {
     return dryAlert;
 }
 
-// ============================================================
-// Kiểm tra ngân sách nước hàng ngày
-// ============================================================
 uint16_t AdaptiveEngine::checkBudget(uint16_t todayUsed, uint16_t dailyBudget) {
     if (todayUsed >= dailyBudget) {
         Serial.println(F("[THICH UNG] Het ngan sach nuoc hom nay!"));
@@ -121,9 +94,6 @@ uint16_t AdaptiveEngine::checkBudget(uint16_t todayUsed, uint16_t dailyBudget) {
     return dailyBudget - todayUsed;
 }
 
-// ============================================================
-// Reset ngân sách cho ngày mới
-// ============================================================
 void AdaptiveEngine::resetDailyBudget(RuntimeData &runtime, uint8_t currentDay) {
     if (runtime.todayDate != currentDay) {
         Serial.printf("[THICH UNG] Ngay moi (%d → %d) - reset ngan sach nuoc\n",

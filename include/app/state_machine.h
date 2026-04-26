@@ -1,16 +1,3 @@
-/**
- * @file state_machine.h
- * @brief Máy trạng thái chính điều phối toàn bộ hệ thống
- * 
- * 7 trạng thái: IDLE → READ_SENSOR → ANALYZE → DECIDE → WATERING → LOGGING → IDLE
- *               Bất kỳ → ERROR (khi phát hiện lỗi)
- * 
- * Tính năng:
- * - Non-blocking hoàn toàn (dùng millis)
- * - Progressive watering (tưới từng xung 30s, kiểm tra giữa các xung)
- * - Xử lý nút nhấn: long press → MANUAL, short press → toggle bơm
- * - An toàn: timeout, sensor fail, pump fail → tất cả được giám sát
- */
 
 #ifndef STATE_MACHINE_H
 #define STATE_MACHINE_H
@@ -31,35 +18,14 @@
 
 class StateMachine {
 public:
-    /**
-     * @brief Khởi tạo state machine và tất cả các subsystem
-     * @return true nếu khởi tạo thành công
-     */
     bool init();
 
-    /**
-     * @brief Chạy 1 chu kỳ state machine (gọi trong loop)
-     * 
-     * Non-blocking: mỗi lần gọi chỉ xử lý 1 bước nhỏ.
-     * Tất cả timing được quản lý bằng millis().
-     */
     void update();
 
-    /**
-     * @brief Xử lý sự kiện nút nhấn
-     * @param event Sự kiện từ ButtonDriver
-     */
     void handleButtonEvent(ButtonEvent event);
 
-    /**
-     * @brief Lấy trạng thái tổng hợp (cho web API)
-     */
     SystemStatus getStatus() const;
 
-    /**
-     * @brief Thay đổi chế độ hoạt động (từ web - chỉ set config, SM quyết định)
-     * @param mode Chế độ mới
-     */
     void requestModeChange(OperationMode mode);
 
     // ─── Getter cho các subsystem (web server cần truy cập) ───
@@ -67,9 +33,6 @@ public:
     SensorData& getSensorData();
     RtcDriver& getRtcDriver();
 
-    /**
-     * @brief Hiển thị màn hình khởi động trên LCD
-     */
     void showBootScreen();
 
 private:

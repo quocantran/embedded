@@ -1,25 +1,9 @@
-/**
- * @file web_server.cpp
- * @brief Triển khai web server cấu hình - WiFi Station Mode
- * 
- * NGUYÊN TẮC QUAN TRỌNG:
- * Web server CHỈ là giao diện cấu hình. Nó KHÔNG điều khiển trực tiếp relay.
- * Mọi thay đổi từ web được ghi vào config → State machine đọc config → quyết định.
- * 
- * WiFi Station Mode:
- * - Kết nối vào WiFi nhà (SSID/PASS từ config.h)
- * - IP do router cấp (hiện trên LCD + Serial)
- * - Port: 80
- */
 
 #include "app/web_server.h"
 #include "app/state_machine.h"
 #include "app/web_page.h"
 #include <ArduinoJson.h>
 
-// ============================================================
-// Khởi tạo WiFi STA và web server
-// ============================================================
 String WebServerManager::init(StateMachine &sm) {
     _sm = &sm;
 
@@ -61,9 +45,6 @@ String WebServerManager::init(StateMachine &sm) {
     return ip;
 }
 
-// ============================================================
-// Cập nhật (kiểm tra WiFi vẫn kết nối)
-// ============================================================
 void WebServerManager::update() {
     // Kiểm tra WiFi có mất kết nối không
     if (WiFi.status() != WL_CONNECTED) {
@@ -78,9 +59,6 @@ void WebServerManager::update() {
     }
 }
 
-// ============================================================
-// Đăng ký routes
-// ============================================================
 void WebServerManager::_setupRoutes() {
     // GET / → Trang HTML chính
     _server.on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
@@ -175,16 +153,10 @@ void WebServerManager::_setupRoutes() {
     Serial.println(F("[WEB] Da dang ky tat ca routes"));
 }
 
-// ============================================================
-// GET / → Trang HTML
-// ============================================================
 void WebServerManager::_handleRoot(AsyncWebServerRequest *request) {
     request->send_P(200, "text/html", WEB_PAGE_HTML);
 }
 
-// ============================================================
-// GET /api/status → Trạng thái JSON
-// ============================================================
 void WebServerManager::_handleGetStatus(AsyncWebServerRequest *request) {
     if (!_sm) {
         request->send(500, "application/json", "{\"error\":\"SM null\"}");
@@ -244,9 +216,6 @@ void WebServerManager::_handleGetStatus(AsyncWebServerRequest *request) {
     request->send(200, "application/json", response);
 }
 
-// ============================================================
-// POST /api/config → Cập nhật cấu hình
-// ============================================================
 void WebServerManager::_handlePostConfig(AsyncWebServerRequest *request) {
     if (!_sm || !request->_tempObject) {
         request->send(400, "application/json", "{\"ok\":false,\"msg\":\"Không có dữ liệu\"}");
@@ -285,9 +254,6 @@ void WebServerManager::_handlePostConfig(AsyncWebServerRequest *request) {
     request->send(200, "application/json", "{\"ok\":true}");
 }
 
-// ============================================================
-// POST /api/schedule → Cập nhật lịch tưới
-// ============================================================
 void WebServerManager::_handlePostSchedule(AsyncWebServerRequest *request) {
     if (!_sm || !request->_tempObject) {
         request->send(400, "application/json", "{\"ok\":false,\"msg\":\"Không có dữ liệu\"}");
@@ -346,9 +312,6 @@ void WebServerManager::_handlePostSchedule(AsyncWebServerRequest *request) {
     request->send(200, "application/json", "{\"ok\":true}");
 }
 
-// ============================================================
-// POST /api/mode → Yêu cầu đổi chế độ
-// ============================================================
 void WebServerManager::_handlePostMode(AsyncWebServerRequest *request) {
     if (!_sm || !request->_tempObject) {
         request->send(400, "application/json", "{\"ok\":false,\"msg\":\"Không có dữ liệu\"}");
@@ -378,9 +341,6 @@ void WebServerManager::_handlePostMode(AsyncWebServerRequest *request) {
     request->send(200, "application/json", "{\"ok\":true}");
 }
 
-// ============================================================
-// POST /api/calibrate → Hiệu chuẩn cảm biến đất
-// ============================================================
 void WebServerManager::_handlePostCalibrate(AsyncWebServerRequest *request) {
     if (!_sm || !request->_tempObject) {
         request->send(400, "application/json", "{\"ok\":false,\"msg\":\"Không có dữ liệu\"}");

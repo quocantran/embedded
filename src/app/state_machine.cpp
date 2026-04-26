@@ -1,33 +1,10 @@
-/**
- * @file state_machine.cpp
- * @brief Triển khai máy trạng thái chính - điều phối toàn bộ hệ thống
- * 
- * Luồng chính (AUTO mode):
- *   IDLE ──(2s)──→ READ_SENSOR ──→ ANALYZE ──→ DECIDE ──→ WATERING ──→ LOGGING ──→ IDLE
- * 
- * MANUAL mode:
- *   - State machine vẫn chạy IDLE → READ_SENSOR → ANALYZE → LOGGING
- *   - Bơm được điều khiển bằng nút nhấn (short press)
- *   - Safety checks vẫn hoạt động (timeout, sensor fail, soil wet)
- * 
- * Progressive watering:
- *   WATERING ──→ [BƠM 30s] ──→ [TẮT, ĐỌC ĐẤT] ──→ [ĐẤT ĐỦ?] ──→ LOGGING
- *                    ↑                                    │ CHƯA
- *                    └────────────────────────────────────┘
- */
 
 #include "app/state_machine.h"
 
-// ============================================================
-// Tên trạng thái (cho debug log)
-// ============================================================
 static const char* STATE_NAMES[] = {
     "IDLE", "READ_SENSOR", "ANALYZE", "DECIDE", "WATERING", "LOGGING", "ERROR"
 };
 
-// ============================================================
-// Khởi tạo toàn bộ hệ thống
-// ============================================================
 bool StateMachine::init() {
     Serial.println(F("\n========================================"));
     Serial.println(F("  SMART IRRIGATION SYSTEM v1.0"));
@@ -88,9 +65,6 @@ bool StateMachine::init() {
     return true;
 }
 
-// ============================================================
-// Chạy 1 chu kỳ state machine (gọi mỗi loop)
-// ============================================================
 void StateMachine::update() {
     // Test truc quan nhu code mau: nhan nut (LOW) thi LED onboard sang
     bool isButtonPressed = (digitalRead(PIN_BUTTON) == LOW);
@@ -153,9 +127,6 @@ void StateMachine::update() {
     }
 }
 
-// ============================================================
-// Xử lý sự kiện nút nhấn
-// ============================================================
 void StateMachine::handleButtonEvent(ButtonEvent event) {
     if (event == ButtonEvent::LONG_PRESS) {
         // ─── LONG PRESS: Chuyển MANUAL ↔ AUTO ───
@@ -192,9 +163,6 @@ void StateMachine::handleButtonEvent(ButtonEvent event) {
     }
 }
 
-// ============================================================
-// Lấy trạng thái tổng hợp
-// ============================================================
 SystemStatus StateMachine::getStatus() const {
     SystemStatus status;
     status.state = _state;
@@ -213,17 +181,11 @@ SystemStatus StateMachine::getStatus() const {
     return status;
 }
 
-// ============================================================
-// Yêu cầu đổi chế độ từ web
-// ============================================================
 void StateMachine::requestModeChange(OperationMode mode) {
     _pendingMode = mode;
     _modeChangeRequested = true;
 }
 
-// ============================================================
-// Getter cho subsystems
-// ============================================================
 ConfigManager& StateMachine::getConfigManager() {
     return _configManager;
 }
@@ -242,9 +204,6 @@ void StateMachine::showBootScreen() {
     _lcdDriver.printLine(1, " DANG KHOI DONG");
 }
 
-// ============================================================
-// IDLE: Chờ đến chu kỳ đọc cảm biến tiếp theo
-// ============================================================
 void StateMachine::_handleIdle() {
     unsigned long now = millis();
 
@@ -263,9 +222,6 @@ void StateMachine::_handleIdle() {
     }
 }
 
-// ============================================================
-// READ_SENSOR: Đọc tất cả cảm biến
-// ============================================================
 void StateMachine::_handleReadSensor() {
     const SystemConfig &cfg = _configManager.getConfig();
 
@@ -278,9 +234,6 @@ void StateMachine::_handleReadSensor() {
     _setState(SystemState::ANALYZE);
 }
 
-// ============================================================
-// ANALYZE: Phân tích dữ liệu, kiểm tra an toàn
-// ============================================================
 void StateMachine::_handleAnalyze() {
     // Kiểm tra an toàn cảm biến
     ErrorCode sensorError = _safetyManager.checkSensors(
@@ -310,9 +263,6 @@ void StateMachine::_handleAnalyze() {
     _setState(SystemState::DECIDE);
 }
 
-// ============================================================
-// DECIDE: Ra quyết định tưới
-// ============================================================
 void StateMachine::_handleDecide() {
     const SystemConfig &cfg = _configManager.getConfig();
     RuntimeData &runtime = _configManager.getRuntime();
@@ -361,9 +311,6 @@ void StateMachine::_handleDecide() {
     }
 }
 
-// ============================================================
-// WATERING: Progressive watering (tưới từng xung)
-// ============================================================
 void StateMachine::_handleWatering() {
     const SystemConfig &cfg = _configManager.getConfig();
     unsigned long now = millis();
@@ -450,9 +397,6 @@ void StateMachine::_handleWatering() {
     }
 }
 
-// ============================================================
-// LOGGING: Ghi log dữ liệu
-// ============================================================
 void StateMachine::_handleLogging() {
     // Debug log ra Serial
     Serial.printf("[LOG] [%02d:%02d:%02d] Dat:%d%% T:%.1f°C H:%.0f%% Bom:%s Mode:%s\n",
@@ -474,9 +418,6 @@ void StateMachine::_handleLogging() {
     _setState(SystemState::IDLE);
 }
 
-// ============================================================
-// ERROR: Xử lý lỗi và thử phục hồi
-// ============================================================
 void StateMachine::_handleError() {
     // Đảm bảo bơm TẮT khi ERROR
     if (_relayDriver.isOn()) {
@@ -515,9 +456,6 @@ void StateMachine::_handleError() {
     }
 }
 
-// ============================================================
-// Bắt đầu progressive watering
-// ============================================================
 void StateMachine::_startWatering(const IrrigationDecision &decision) {
     _targetPulses = decision.targetPulses;
     _currentPulse = 0;
@@ -533,9 +471,6 @@ void StateMachine::_startWatering(const IrrigationDecision &decision) {
                   _targetPulses, decision.reason.c_str());
 }
 
-// ============================================================
-// Dừng watering
-// ============================================================
 void StateMachine::_stopWatering(const String &reason) {
     _relayDriver.off();
     _waterSubState = WateringSubState::COMPLETE;
@@ -561,9 +496,6 @@ void StateMachine::_stopWatering(const String &reason) {
     _configManager.saveAdaptive();
 }
 
-// ============================================================
-// Kiểm tra an toàn MANUAL mode
-// ============================================================
 void StateMachine::_checkManualSafety() {
     const SystemConfig &cfg = _configManager.getConfig();
     unsigned long now = millis();
@@ -613,9 +545,6 @@ void StateMachine::_checkManualSafety() {
     }
 }
 
-// ============================================================
-// Chuyển trạng thái với debug logging
-// ============================================================
 void StateMachine::_setState(SystemState newState) {
     if (newState != _state) {
         Serial.printf("[SM] %s → %s\n", STATE_NAMES[(int)_state], 

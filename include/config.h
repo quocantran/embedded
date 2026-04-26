@@ -1,17 +1,7 @@
-/**
- * @file config.h
- * @brief Cấu hình toàn hệ thống - Hằng số phần cứng, timing, và mặc định
- * 
- * File này chứa TẤT CẢ các hằng số cấu hình của hệ thống tưới tiêu thông minh.
- * Thay đổi chân kết nối, thời gian, ngưỡng mặc định tại đây.
- */
 
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// ============================================================
-// CHÂN KẾT NỐI PHẦN CỨNG ESP32
-// ============================================================
 
 // --- Chân I2C (dùng chung cho LCD, RTC, EEPROM) ---
 #define PIN_SDA             21      // GPIO21 - Chân dữ liệu I2C
@@ -37,18 +27,12 @@
 #define LCD_I2C_ADDR        0x27    // Địa chỉ LCD I2C 16x2
 #define EEPROM_I2C_ADDR     0x57    // Địa chỉ AT24C32 (trên module DS1307)
 
-// ============================================================
-// CẤU HÌNH THỜI GIAN (milliseconds trừ khi ghi rõ khác)
-// ============================================================
 #define SENSOR_READ_INTERVAL_MS 2000    // Chu kỳ đọc cảm biến: 2 giây
 #define LCD_UPDATE_INTERVAL_MS  500     // Chu kỳ cập nhật LCD: 500ms
 #define LCD_BLINK_INTERVAL_MS   300     // Tốc độ nhấp nháy cảnh báo LCD: 300ms
 #define BUTTON_DEBOUNCE_MS      20      // Chống rung nút nhấn: 20ms (de nhan nut thuc te hon)
 #define BUTTON_LONG_PRESS_MS    3000    // Nhấn giữ >= 3 giây = long press
 
-// ============================================================
-// CẤU HÌNH TƯỚI TIÊU (đơn vị: giây, trừ khi ghi rõ khác)
-// ============================================================
 #define WATERING_PULSE_SEC      30      // Mỗi xung tưới progressive = 30 giây
 #define WATERING_CHECK_DELAY_SEC 5      // Đợi 5 giây sau mỗi xung để đọc lại đất
 #define MAX_PUMP_TIME_SEC       300     // Giới hạn bơm liên tục tối đa = 5 phút
@@ -56,9 +40,6 @@
 #define DEFAULT_WATER_BUDGET_SEC 600    // Ngân sách nước mỗi ngày = 600 giây (10 phút)
 #define MANUAL_TIMEOUT_SEC      60     // Manual mode tự tắt sau 1 phút
 
-// ============================================================
-// CẤU HÌNH CẢM BIẾN
-// ============================================================
 #define DHT_TYPE                DHT11   // Loại cảm biến nhiệt độ/ẩm
 #define SOIL_SAMPLE_COUNT       5       // Số mẫu trung bình cảm biến đất (lọc nhiễu)
 #define DEFAULT_SOIL_DRY_RAW    4095    // Giá trị ADC khi đất hoàn toàn khô
@@ -68,9 +49,6 @@
 #define DEFAULT_DANGER_LEVEL    15      // Ngưỡng nguy hiểm (%) - cảnh báo khẩn
 #define SENSOR_FAIL_MAX_COUNT   5       // Số lần đọc lỗi liên tiếp → chuyển ERROR
 
-// ============================================================
-// CẤU HÌNH EEPROM AT24C32
-// ============================================================
 #define EEPROM_MAGIC_BYTE       0xAB    // Byte ma thuật xác nhận dữ liệu hợp lệ
 #define EEPROM_DATA_VERSION     0x01    // Phiên bản cấu trúc dữ liệu
 #define EEPROM_PAGE_SIZE        32      // Kích thước trang AT24C32 (bytes)
@@ -86,30 +64,18 @@
 #define EEPROM_ADDR_RUNTIME     0x0060  // 8 bytes  - Dữ liệu runtime
 #define EEPROM_ADDR_ADAPTIVE    0x0080  // 8 bytes  - Dữ liệu thích ứng
 
-// ============================================================
-// CẤU HÌNH LCD
-// ============================================================
 #define LCD_COLS                16      // Số cột LCD
 #define LCD_ROWS                2       // Số hàng LCD
 
-// ============================================================
-// CẤU HÌNH WIFI STATION (kết nối vào WiFi nhà)
-// ============================================================
 #define WIFI_STA_SSID           "Minh An"       // Tên WiFi nhà
 #define WIFI_STA_PASS           "88888888"       // Mật khẩu WiFi
 #define WIFI_CONNECT_TIMEOUT_MS 15000            // Timeout kết nối WiFi: 15 giây
 #define WEB_SERVER_PORT         80               // Cổng web server
 
-// ============================================================
-// CẤU HÌNH NTP (đồng bộ giờ từ internet)
-// ============================================================
 #define NTP_SERVER              "pool.ntp.org"   // Server NTP
 #define NTP_GMT_OFFSET_SEC      25200            // GMT+7 (Việt Nam) = 7*3600
 #define NTP_DAYLIGHT_OFFSET_SEC 0                // Không có DST
 
-// ============================================================
-// CẤU HÌNH AN TOÀN
-// ============================================================
 #define PUMP_FAIL_CHECK_SEC     60      // Sau 60s tưới mà đất không tăng → cảnh báo
 #define SOIL_RESPONSE_MIN_PCT   5       // Đất phải tăng ít nhất 5% sau kiểm tra bơm
 

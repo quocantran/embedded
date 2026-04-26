@@ -1,20 +1,3 @@
-/**
- * @file button_driver.h
- * @brief Driver nút nhấn vật lý với debounce và phát hiện long press
- * 
- * Nút nhấn nối giữa GPIO và GND, sử dụng internal pull-up của ESP32.
- * 
- * Hành vi:
- * - Nhấn ngắn (< 3 giây, phát hiện khi THẢ):
- *     Trong MANUAL mode → bật/tắt bơm
- * - Nhấn giữ (>= 3 giây, phát hiện khi ĐANG GIỮ):
- *     → Chuyển sang MANUAL mode (hoặc thoát về AUTO)
- * 
- * Kết nối phần cứng trên breadboard 830 lỗ:
- * - Một chân nút nhấn → GPIO4 (ESP32)
- * - Chân còn lại → GND (ESP32)
- * - KHÔNG cần điện trở pull-up ngoài (dùng internal pull-up)
- */
 
 #ifndef BUTTON_DRIVER_H
 #define BUTTON_DRIVER_H
@@ -25,25 +8,10 @@
 
 class ButtonDriver {
 public:
-    /**
-     * @brief Khởi tạo chân nút nhấn (INPUT_PULLUP)
-     */
     void init();
 
-    /**
-     * @brief Cập nhật trạng thái nút nhấn (GỌI MỖI VÒNG LOOP)
-     * 
-     * Hàm này xử lý debounce và phát hiện sự kiện nhấn.
-     * Phải được gọi liên tục trong loop() để hoạt động chính xác.
-     */
     void update();
 
-    /**
-     * @brief Lấy sự kiện nút nhấn và xóa sự kiện đang chờ
-     * @return ButtonEvent::SHORT_PRESS, LONG_PRESS, hoặc NONE
-     * 
-     * Mỗi sự kiện chỉ trả về 1 lần. Sau khi đọc, sự kiện được xóa.
-     */
     ButtonEvent getEvent();
 
 private:
