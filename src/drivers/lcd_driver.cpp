@@ -1,58 +1,9 @@
 
 #include "drivers/lcd_driver.h"
 
-// Dữ liệu ký tự tùy chỉnh 5x8 pixel
-// Mỗi byte = 1 hàng, 5 bit thấp = 5 pixel
-static const uint8_t PUMP_CHAR[8] PROGMEM = {
-    0b00100,  //   *
-    0b01110,  //  ***
-    0b11111,  // *****
-    0b01110,  //  ***
-    0b00100,  //   *
-    0b01010,  //  * *
-    0b10001,  // *   *
-    0b00000   //
-};
-
-static const uint8_t DROP_CHAR[8] PROGMEM = {
-    0b00100,  //   *
-    0b00100,  //   *
-    0b01010,  //  * *
-    0b01010,  //  * *
-    0b10001,  // *   *
-    0b10001,  // *   *
-    0b01110,  //  ***
-    0b00000   //
-};
-
-static const uint8_t SUN_CHAR[8] PROGMEM = {
-    0b00100,  //   *
-    0b10101,  // * * *
-    0b01110,  //  ***
-    0b11111,  // *****
-    0b01110,  //  ***
-    0b10101,  // * * *
-    0b00100,  //   *
-    0b00000   //
-};
-
-static const uint8_t WARN_CHAR[8] PROGMEM = {
-    0b00100,  //   *
-    0b00100,  //   *
-    0b01010,  //  * *
-    0b01110,  //  ***
-    0b11011,  // ** **
-    0b11111,  // *****
-    0b11111,  // *****
-    0b00000   //
-};
-
 void LcdDriver::init() {
     _lcd.init();
     _lcd.backlight();
-
-    // Tạo các ký tự tùy chỉnh
-    _createCustomChars();
 
     // Hiển thị thông báo khởi động
     _lcd.clear();
@@ -122,30 +73,4 @@ void LcdDriver::updateBlink() {
             _lcd.noBacklight();
         }
     }
-}
-
-void LcdDriver::printCustomChar(uint8_t col, uint8_t row, uint8_t charIndex) {
-    if (row > 1 || col > 15 || charIndex > 7) return;
-    _lcd.setCursor(col, row);
-    _lcd.write(charIndex);
-}
-
-void LcdDriver::_createCustomChars() {
-    uint8_t buffer[8];
-
-    // Icon máy bơm
-    memcpy_P(buffer, PUMP_CHAR, 8);
-    _lcd.createChar(CHAR_PUMP, buffer);
-
-    // Icon giọt nước
-    memcpy_P(buffer, DROP_CHAR, 8);
-    _lcd.createChar(CHAR_DROP, buffer);
-
-    // Icon mặt trời
-    memcpy_P(buffer, SUN_CHAR, 8);
-    _lcd.createChar(CHAR_SUN, buffer);
-
-    // Icon cảnh báo
-    memcpy_P(buffer, WARN_CHAR, 8);
-    _lcd.createChar(CHAR_WARN, buffer);
 }
