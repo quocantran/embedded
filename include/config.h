@@ -67,8 +67,8 @@
 #define LCD_COLS                16      // Số cột LCD
 #define LCD_ROWS                2       // Số hàng LCD
 
-#define WIFI_STA_SSID           "Minh An"       // Tên WiFi nhà
-#define WIFI_STA_PASS           "88888888"       // Mật khẩu WiFi
+#define WIFI_STA_SSID           "123456"       // Tên WiFi nhà
+#define WIFI_STA_PASS           "123"       // Mật khẩu WiFi
 #define WIFI_CONNECT_TIMEOUT_MS 15000            // Timeout kết nối WiFi: 15 giây
 #define WEB_SERVER_PORT         80               // Cổng web server
 

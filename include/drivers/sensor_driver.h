@@ -20,16 +20,16 @@ public:
     uint8_t getSoilFailCount() const;
 
 private:
-    DHT _dht = DHT(PIN_DHT, DHT_TYPE);     // Đối tượng DHT
+    DHT _dht = DHT(PIN_DHT, DHT_TYPE);
 
     // Bộ lọc trung bình cho cảm biến đất
-    int _soilSamples[SOIL_SAMPLE_COUNT];    // Mảng mẫu
-    uint8_t _sampleIndex = 0;              // Chỉ số mẫu hiện tại
-    bool _samplesReady = false;            // Đã đủ mẫu để tính trung bình?
+    int _soilSamples[SOIL_SAMPLE_COUNT];
+    uint8_t _sampleIndex = 0;              
+    bool _samplesReady = false;
 
     // Đếm lỗi liên tiếp
-    uint8_t _dhtFailCount = 0;             // Số lần DHT lỗi liên tiếp
-    uint8_t _soilFailCount = 0;            // Số lần đất lỗi liên tiếp
+    uint8_t _dhtFailCount = 0;
+    uint8_t _soilFailCount = 0;
 
     int _readSoilFiltered();
 

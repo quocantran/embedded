@@ -29,7 +29,7 @@ private:
 
     bool _blinking = false;             // Đang trong chế độ nhấp nháy?
     bool _blinkState = true;            // Trạng thái hiện tại (bật/tắt)
-    unsigned long _lastBlinkTime = 0;   // Thời điểm blink cuối cùng
+    unsigned long _lastBlinkTime = 0;
 };
 
 #endif // LCD_DRIVER_H

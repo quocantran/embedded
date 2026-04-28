@@ -97,7 +97,6 @@ int SensorDriver::_readSoilFiltered() {
 
 int SensorDriver::_rawToPercent(int raw, uint16_t dryRaw, uint16_t wetRaw) {
     // Map giá trị ADC: đất khô (4095 ADC) = 0%, đất ướt (1500 ADC) = 100%
-    // Lưu ý: ADC nghịch đảo - nước dẫn điện tốt hơn → điện trở giảm → ADC giảm
     int percent = map(raw, (int)dryRaw, (int)wetRaw, 0, 100);
 
     // Giới hạn trong khoảng 0-100%
