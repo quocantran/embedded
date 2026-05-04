@@ -19,7 +19,7 @@ public:
                          uint8_t highThresh, bool currentlyWatering);
 
 private:
-    bool _wasWatering = false;  // Trạng thái trước đó (cho hysteresis)
+    bool _wasWatering = false;
 
     bool _isNoonPeriod(uint8_t hour);
 

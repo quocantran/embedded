@@ -70,6 +70,16 @@ void StateMachine::update() {
     bool isButtonPressed = (digitalRead(PIN_BUTTON) == LOW);
     digitalWrite(PIN_STATUS_LED, isButtonPressed ? HIGH : LOW);
 
+    if (_scheduleAutoFallbackPending && millis() >= _scheduleAutoFallbackAt) {
+        _scheduleAutoFallbackPending = false;
+        if (_mode == OperationMode::SCHEDULE) {
+            Serial.println(F("[SM] Khong co lich tuoi - tu dong ve AUTO"));
+            _mode = OperationMode::AUTO;
+            _configManager.getConfigMutable().mode = (uint8_t)_mode;
+            _configManager.saveConfig();
+        }
+    }
+
     // ─── Luôn cập nhật nút nhấn ───
     _buttonDriver.update();
     ButtonEvent event = _buttonDriver.getEvent();
@@ -129,22 +139,40 @@ void StateMachine::update() {
 
 void StateMachine::handleButtonEvent(ButtonEvent event) {
     if (event == ButtonEvent::LONG_PRESS) {
-        // ─── LONG PRESS: Chuyển MANUAL ↔ AUTO ───
-        if (_mode == OperationMode::MANUAL) {
-            // Đang MANUAL → về AUTO
-            Serial.println(F("[SM] Nut giu: MANUAL → AUTO"));
-            _relayDriver.off(); // Tắt bơm an toàn
-            _mode = OperationMode::AUTO;
-            _manualDangerStartTime = 0;
-            _displayManager.showTemporaryMessage("MODE CHANGED", "MANUAL -> AUTO");
-        } else {
-            // Đang AUTO/SCHEDULE → vào MANUAL
-            Serial.println(F("[SM] Nut giu: → MANUAL"));
-            _mode = OperationMode::MANUAL;
-            _manualStartTime = millis();
-            _manualDangerStartTime = 0;
-            _displayManager.showTemporaryMessage("MODE CHANGED", "TO MANUAL");
+        // ─── LONG PRESS: Chuyển tuần tự AUTO -> MANUAL -> SCHEDULE -> AUTO ───
+        OperationMode nextMode = OperationMode::AUTO;
+        if (_mode == OperationMode::AUTO) nextMode = OperationMode::MANUAL;
+        else if (_mode == OperationMode::MANUAL) nextMode = OperationMode::SCHEDULE;
+        else nextMode = OperationMode::AUTO;
+
+        _scheduleAutoFallbackPending = false;
+
+        // Tắt bơm an toàn khi đổi mode
+        if (_relayDriver.isOn()) {
+            _relayDriver.off();
         }
+
+        if (nextMode == OperationMode::SCHEDULE && !_hasConfiguredSchedule()) {
+            Serial.println(F("[SM] Chua co lich tuoi - hien thi nhac cau hinh va ve AUTO"));
+            _mode = OperationMode::SCHEDULE;
+            _displayManager.showTemporaryMessage("VUI LONG CAU", "HINH LICH TUOI", 5000);
+            _scheduleAutoFallbackPending = true;
+            _scheduleAutoFallbackAt = millis() + 5000;
+        } else {
+            _mode = nextMode;
+            if (_mode == OperationMode::MANUAL) {
+                _manualStartTime = millis();
+                _manualDangerStartTime = 0;
+                _displayManager.showTemporaryMessage("MODE CHANGED", "TO MANUAL");
+            } else if (_mode == OperationMode::SCHEDULE) {
+                _manualDangerStartTime = 0;
+                _displayManager.showTemporaryMessage("MODE CHANGED", "TO SCHEDULE");
+            } else {
+                _manualDangerStartTime = 0;
+                _displayManager.showTemporaryMessage("MODE CHANGED", "TO AUTO");
+            }
+        }
+
         // Lưu chế độ vào config
         _configManager.getConfigMutable().mode = (uint8_t)_mode;
         _configManager.saveConfig();
@@ -158,9 +186,20 @@ void StateMachine::handleButtonEvent(ButtonEvent event) {
         } else {
             // ─── SHORT PRESS ngoài MANUAL: Không làm gì (LCD 1 trang) ───
             Serial.println(F("[SM] Nut ngan: Khong o MANUAL - bo qua"));
-            _displayManager.showTemporaryMessage("BUTTON SHORT", "HOLD 3S MANUAL");
+            _displayManager.showTemporaryMessage("BUTTON SHORT", "HOLD 3S MODE");
         }
     }
+}
+
+bool StateMachine::_hasConfiguredSchedule() {
+    ScheduleEntry *schedules = _configManager.getSchedules();
+    for (int i = 0; i < MAX_SCHEDULES; i++) {
+        if (schedules[i].enabled && schedules[i].durationSec > 0 &&
+            (schedules[i].daysMask & 0x7F) != 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 SystemStatus StateMachine::getStatus() const {
@@ -202,6 +241,14 @@ void StateMachine::showBootScreen() {
     _lcdDriver.clear();
     _lcdDriver.printLine(0, "SMART IRRIGATION");
     _lcdDriver.printLine(1, " DANG KHOI DONG");
+}
+
+void StateMachine::showWebAddress(const String &ipAddress) {
+    String line2 = ipAddress.length() > 0 ? ipAddress : "KHONG KET NOI";
+    _displayManager.showTemporaryMessage("DIA CHI WEB", line2, 5000);
+    _lcdDriver.clear();
+    _lcdDriver.printLine(0, "DIA CHI WEB");
+    _lcdDriver.printLine(1, line2);
 }
 
 void StateMachine::_handleIdle() {
@@ -266,6 +313,10 @@ void StateMachine::_handleAnalyze() {
 void StateMachine::_handleDecide() {
     const SystemConfig &cfg = _configManager.getConfig();
     RuntimeData &runtime = _configManager.getRuntime();
+    uint16_t pulseSec = cfg.wateringPulseSec;
+    if (pulseSec < MIN_WATERING_PULSE_SEC || pulseSec > MAX_WATERING_PULSE_SEC) {
+        pulseSec = DEFAULT_WATERING_PULSE_SEC;
+    }
 
     if (_mode == OperationMode::AUTO) {
         // ─── AUTO: Hỏi IrrigationService ───
@@ -281,9 +332,10 @@ void StateMachine::_handleDecide() {
             // Điều chỉnh bởi adaptive engine
             uint16_t adjusted = _adaptiveEngine.adjustDuration(
                 _currentDecision.durationSec, _configManager.getAdaptive());
-            _currentDecision.durationSec = adjusted;
-            _currentDecision.targetPulses = adjusted / WATERING_PULSE_SEC;
+            _currentDecision.targetPulses = adjusted / pulseSec;
+            if (adjusted % pulseSec != 0) _currentDecision.targetPulses++;
             if (_currentDecision.targetPulses == 0) _currentDecision.targetPulses = 1;
+            _currentDecision.durationSec = (uint16_t)_currentDecision.targetPulses * pulseSec;
 
             _startWatering(_currentDecision);
             _setState(SystemState::WATERING);
@@ -314,6 +366,15 @@ void StateMachine::_handleDecide() {
 void StateMachine::_handleWatering() {
     const SystemConfig &cfg = _configManager.getConfig();
     unsigned long now = millis();
+    uint16_t pulseSec = cfg.wateringPulseSec;
+    uint16_t checkDelaySec = cfg.wateringCheckDelaySec;
+    if (pulseSec < MIN_WATERING_PULSE_SEC || pulseSec > MAX_WATERING_PULSE_SEC) {
+        pulseSec = DEFAULT_WATERING_PULSE_SEC;
+    }
+    if (checkDelaySec < MIN_WATERING_CHECK_DELAY_SEC ||
+        checkDelaySec > MAX_WATERING_CHECK_DELAY_SEC) {
+        checkDelaySec = DEFAULT_WATERING_CHECK_DELAY_SEC;
+    }
 
     switch (_waterSubState) {
         case WateringSubState::PUMP_ON: {
@@ -329,10 +390,10 @@ void StateMachine::_handleWatering() {
                 return;
             }
 
-            // Kiểm tra xung đã hết thời gian chưa (30s)
-            if (elapsed >= WATERING_PULSE_SEC) {
+            // Kiểm tra xung đã hết thời gian chưa
+            if (elapsed >= pulseSec) {
                 _relayDriver.off();
-                _totalWateringTime += WATERING_PULSE_SEC;
+                _totalWateringTime += pulseSec;
                 _currentPulse++;
 
                 Serial.printf("[SM] Xung %d/%d hoan thanh (%ds tong)\n",
@@ -349,7 +410,7 @@ void StateMachine::_handleWatering() {
             // ─── Đợi + đọc lại cảm biến đất ───
             uint32_t waitElapsed = (now - _checkStartTime) / 1000;
 
-            if (waitElapsed >= WATERING_CHECK_DELAY_SEC) {
+            if (waitElapsed >= checkDelaySec) {
                 // Đọc lại cảm biến đất
                 _sensorDriver.readSoilOnly(_sensorData, cfg.soilDryRaw, cfg.soilWetRaw);
 
@@ -504,13 +565,13 @@ void StateMachine::_checkManualSafety() {
     if (_sensorData.soilValid && _sensorData.soilPercent <= cfg.dangerThreshold) {
         if (_manualDangerStartTime == 0) {
             _manualDangerStartTime = now;
-            Serial.printf("[SM] MANUAL: Dat nguy hiem %d%%, bat dau dem %d phut\n",
-                          _sensorData.soilPercent, cfg.manualTimeoutMin);
+            Serial.printf("[SM] MANUAL: Dat nguy hiem %d%%, bat dau dem %d giay\n",
+                          _sensorData.soilPercent, cfg.manualTimeoutSec);
         } else {
-            uint32_t dangerMs = (uint32_t)cfg.manualTimeoutMin * 60UL * 1000UL;
+            uint32_t dangerMs = (uint32_t)cfg.manualTimeoutSec * 1000UL;
             if (now - _manualDangerStartTime >= dangerMs) {
-                Serial.printf("[SM] MANUAL: Dat nguy hiem lien tuc > %d phut → AUTO\n",
-                              cfg.manualTimeoutMin);
+                Serial.printf("[SM] MANUAL: Dat nguy hiem lien tuc > %d giay -> AUTO\n",
+                              cfg.manualTimeoutSec);
                 _relayDriver.off();
                 _mode = OperationMode::AUTO;
                 _manualDangerStartTime = 0;
@@ -540,6 +601,11 @@ void StateMachine::_checkManualSafety() {
             _safetyManager.isSoilWetEnough(_sensorData.soilPercent, 
                                             cfg.soilThresholdHigh)) {
             Serial.println(F("[SM] Dat du am trong MANUAL → tat bom"));
+            _displayManager.showTemporaryMessage(
+                "DAT DA DU AM " + String(_sensorData.soilPercent) + "%",
+                "KHONG CAN TUOI",
+                2200
+            );
             _relayDriver.off();
         }
     }

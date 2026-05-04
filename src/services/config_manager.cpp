@@ -28,8 +28,9 @@ void ConfigManager::init(EepromDriver &eeprom) {
                   _config.dangerThreshold);
     Serial.printf("[CONFIG] Bom max: %d phut, Budget: %d giay/ngay\n",
                   _config.maxPumpTimeMin, _config.dailyWaterBudget);
-    Serial.printf("[CONFIG] Cooldown: %d phut, Manual timeout: %d phut\n",
-                  _config.cooldownMinutes, _config.manualTimeoutMin);
+    Serial.printf("[CONFIG] Cooldown: %d phut, Manual timeout: %d giay, Pulse: %d giay, Nghi: %d giay\n",
+                  _config.cooldownMinutes, _config.manualTimeoutSec,
+                  _config.wateringPulseSec, _config.wateringCheckDelaySec);
     Serial.printf("[CONFIG] Che do: %d (0=AUTO, 1=MANUAL, 2=SCHEDULE)\n",
                   _config.mode);
 }
@@ -74,7 +75,9 @@ void ConfigManager::resetDefaults() {
     _config.maxPumpTimeMin = MAX_PUMP_TIME_SEC / 60;
     _config.dailyWaterBudget = DEFAULT_WATER_BUDGET_SEC;
     _config.cooldownMinutes = DEFAULT_COOLDOWN_MIN;
-    _config.manualTimeoutMin = MANUAL_TIMEOUT_SEC / 60;
+    _config.manualTimeoutSec = MANUAL_TIMEOUT_SEC;
+    _config.wateringPulseSec = DEFAULT_WATERING_PULSE_SEC;
+    _config.wateringCheckDelaySec = DEFAULT_WATERING_CHECK_DELAY_SEC;
     _config.mode = (uint8_t)OperationMode::AUTO;
 
     // Reset lịch tưới

@@ -2,7 +2,6 @@
 #include "drivers/sensor_driver.h"
 
 void SensorDriver::init() {
-    // Khởi tạo DHT11
     _dht.begin();
 
     // Khởi tạo chân ADC cho cảm biến đất
@@ -15,7 +14,6 @@ void SensorDriver::init() {
     _sampleIndex = 0;
     _samplesReady = false;
 
-    // Reset bộ đếm lỗi
     _dhtFailCount = 0;
     _soilFailCount = 0;
 
@@ -23,18 +21,14 @@ void SensorDriver::init() {
 }
 
 void SensorDriver::readAll(SensorData &data, uint16_t dryRaw, uint16_t wetRaw) {
-    // --- Đọc DHT11 ---
     float t = _dht.readTemperature();
     float h = _dht.readHumidity();
 
     if (isnan(t) || isnan(h)) {
-        // DHT đọc lỗi
         _dhtFailCount++;
         data.dhtValid = false;
-        // Giữ nguyên giá trị cũ, không ghi đè
         Serial.printf("[SENSOR] DHT loi lan thu %d\n", _dhtFailCount);
     } else {
-        // DHT đọc thành công - reset bộ đếm lỗi
         _dhtFailCount = 0;
         data.temperature = t;
         data.humidity = h;
@@ -99,6 +93,5 @@ int SensorDriver::_rawToPercent(int raw, uint16_t dryRaw, uint16_t wetRaw) {
     // Map giá trị ADC: đất khô (4095 ADC) = 0%, đất ướt (1500 ADC) = 100%
     int percent = map(raw, (int)dryRaw, (int)wetRaw, 0, 100);
 
-    // Giới hạn trong khoảng 0-100%
     return constrain(percent, 0, 100);
 }

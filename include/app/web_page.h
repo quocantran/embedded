@@ -135,7 +135,7 @@ body{
 
 label{display:block;font-size:.82em;color:var(--muted);margin-bottom:5px;font-weight:600}
 
-input[type=number],select{
+input[type=number],input[type=text],input[type=password],select{
   width:100%;
   padding:10px 11px;
   background:#fff;
@@ -146,7 +146,7 @@ input[type=number],select{
   font-family:inherit;
 }
 
-input[type=number]:focus,select:focus{
+input[type=number]:focus,input[type=text]:focus,input[type=password]:focus,select:focus{
   outline:none;
   border-color:var(--primary);
   box-shadow:0 0 0 3px rgba(47,143,78,.15);
@@ -311,9 +311,13 @@ input[type=number]:focus,select:focus{
       <input type="number" id="c-budget" min="60" max="3600" value="600"></div>
     <div><label>Thời gian nghỉ (phút)</label>
       <input type="number" id="c-cool" min="5" max="120" value="30"></div>
+    <div><label>Thời gian mỗi xung (giây)</label>
+      <input type="number" id="c-pulsesec" min="5" max="120" step="1" value="30"></div>
+    <div><label>Nghỉ giữa các xung (giây)</label>
+      <input type="number" id="c-checkdelaysec" min="1" max="120" step="1" value="5"></div>
+    <div><label>Thoát MANUAL khi đất nguy hiểm quá (giây)</label>
+      <input type="number" id="c-mantimeout" min="1" max="1800" step="1" value="60"></div>
   </div>
-  <div style="margin-top:10px"><label>Thoát MANUAL khi đất nguy hiểm quá (phút)</label>
-    <input type="number" id="c-mantimeout" min="1" max="30" value="5"></div>
   <button class="btn btn-green" style="margin-top:12px" onclick="saveConfig()">
     💾 Lưu cấu hình</button>
 </div>
@@ -322,6 +326,7 @@ input[type=number]:focus,select:focus{
 <div class="card">
   <h2><span class="icon">📅</span> Lịch tưới (tối đa 4)</h2>
   <p class="desc">Mỗi lịch gồm giờ bắt đầu, phút bắt đầu và thời lượng tưới (giây). Chọn các ngày áp dụng rồi bấm lưu lịch tưới.</p>
+  <p class="desc">Thời lượng mỗi lịch phải là bội số của thời gian mỗi xung.</p>
   <p class="desc">Lưu ý: Lịch kích hoạt theo giờ + phút (không có giây bắt đầu). Ô giây là số giây bơm chạy cho mỗi lịch.</p>
   <div id="schedules"></div>
   <button class="btn btn-blue" style="margin-top:10px" onclick="saveSchedules()">
@@ -349,6 +354,17 @@ input[type=number]:focus,select:focus{
 <script>
 const DAYS=['CN','T2','T3','T4','T5','T6','T7'];
 let lastScheduleSig='';
+let currentPulseSec=30;
+let latestSchedules=[];
+
+function hasConfiguredSchedule(schedules){
+  if(!Array.isArray(schedules)) return false;
+  return schedules.some(s=>
+    s && Number(s.enabled)===1 &&
+    Number(s.duration)>0 &&
+    (Number(s.days)&0x7F)!==0
+  );
+}
 
 function isUserEditingForm(){
   const el=document.activeElement;
@@ -382,13 +398,21 @@ function updateEditableFields(d){
   document.getElementById('c-maxpump').value=d.maxPump;
   document.getElementById('c-budget').value=d.budget;
   document.getElementById('c-cool').value=d.cooldown;
-  document.getElementById('c-mantimeout').value=d.manTimeout;
+  currentPulseSec=(typeof d.pulseSec==='number'&&d.pulseSec>=5&&d.pulseSec<=120)?d.pulseSec:30;
+  document.getElementById('c-pulsesec').value=currentPulseSec;
+  const checkDelaySec=(typeof d.checkDelaySec==='number'&&d.checkDelaySec>=1&&d.checkDelaySec<=120)?d.checkDelaySec:5;
+  document.getElementById('c-checkdelaysec').value=checkDelaySec;
+  const manTimeoutSec=(typeof d.manTimeoutSec==='number')
+    ?d.manTimeoutSec
+    :((typeof d.manTimeout==='number')?(d.manTimeout*60):60);
+  document.getElementById('c-mantimeout').value=manTimeoutSec;
   document.getElementById('cal-dry').value=d.calDry;
   document.getElementById('cal-wet').value=d.calWet;
+  latestSchedules=Array.isArray(d.schedules)?d.schedules:[];
 
-  const scheduleSig=JSON.stringify(d.schedules||[]);
+  const scheduleSig=JSON.stringify({pulseSec:currentPulseSec,schedules:latestSchedules});
   if(scheduleSig!==lastScheduleSig){
-    renderSchedules(d.schedules);
+    renderSchedules(latestSchedules);
     lastScheduleSig=scheduleSig;
   }
 }
@@ -410,10 +434,18 @@ function fetchStatus(){
 
 function renderSchedules(scheds){
   const c=document.getElementById('schedules');
+  const pulseSec=(typeof currentPulseSec==='number'&&currentPulseSec>=5&&currentPulseSec<=120)?currentPulseSec:30;
+  const minDuration=Math.max(10,pulseSec);
   let html='';
   for(let i=0;i<4;i++){
-    const s=scheds&&scheds[i]?scheds[i]:{enabled:0,hour:6,minute:0,days:127,duration:60};
-    const duration=(typeof s.duration==='number'&&s.duration>=10&&s.duration<=600)?s.duration:60;
+    const s=scheds&&scheds[i]?scheds[i]:{enabled:0,hour:6,minute:0,days:127,duration:pulseSec*2};
+    const rawDuration=(typeof s.duration==='number'&&s.duration>=minDuration&&s.duration<=600)?s.duration:(pulseSec*2);
+    let duration=Math.max(minDuration,Math.min(600,rawDuration));
+    if(duration%pulseSec!==0){
+      duration=Math.ceil(duration/pulseSec)*pulseSec;
+      if(duration>600)duration=Math.floor(600/pulseSec)*pulseSec;
+      if(duration<minDuration)duration=minDuration;
+    }
     html+='<div class="sch-item">';
     html+='<div class="sch-head">Lịch '+(i+1)+'</div>';
     html+='<div class="sch-row">';
@@ -425,7 +457,7 @@ function renderSchedules(scheds){
     html+='<div class="sch-field"><label for="sch-m-'+i+'">Phút (0-59)</label>';
     html+='<input type="number" id="sch-m-'+i+'" min="0" max="59" value="'+s.minute+'"></div>';
     html+='<div class="sch-field"><label for="sch-dur-'+i+'">Thời lượng (giây)</label>';
-    html+='<input type="number" id="sch-dur-'+i+'" min="10" max="600" value="'+duration+'"></div>';
+    html+='<input type="number" id="sch-dur-'+i+'" min="'+minDuration+'" max="600" step="'+pulseSec+'" value="'+duration+'"></div>';
     html+='</div>';
     html+='<div class="days">';
     for(let d=0;d<7;d++){
@@ -438,6 +470,11 @@ function renderSchedules(scheds){
 }
 
 function setMode(m){
+  if(m===2 && !hasConfiguredSchedule(latestSchedules)){
+    toast('Hay cau hinh lich tuoi truoc khi vao mode SCHEDULE',false);
+    return;
+  }
+
   fetch('/api/mode',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({mode:m})}).then(r=>r.json()).then(d=>{
     if(d.ok)toast('Đã gửi yêu cầu đổi chế độ',true);
@@ -447,6 +484,22 @@ function setMode(m){
 }
 
 function saveConfig(){
+  const manTimeoutSec=+document.getElementById('c-mantimeout').value;
+  const pulseSec=+document.getElementById('c-pulsesec').value;
+  const checkDelaySec=+document.getElementById('c-checkdelaysec').value;
+  if(manTimeoutSec<1||manTimeoutSec>1800){
+    toast('Thoát MANUAL phải từ 1 đến 1800 giây',false);
+    return;
+  }
+  if(pulseSec<5||pulseSec>120){
+    toast('Thời gian mỗi xung phải từ 5 đến 120 giây',false);
+    return;
+  }
+  if(checkDelaySec<1||checkDelaySec>120){
+    toast('Nghỉ giữa các xung phải từ 1 đến 120 giây',false);
+    return;
+  }
+
   const data={
     low:+document.getElementById('c-low').value,
     high:+document.getElementById('c-high').value,
@@ -454,7 +507,9 @@ function saveConfig(){
     maxPump:+document.getElementById('c-maxpump').value,
     budget:+document.getElementById('c-budget').value,
     cooldown:+document.getElementById('c-cool').value,
-    manTimeout:+document.getElementById('c-mantimeout').value
+    manTimeoutSec:manTimeoutSec,
+    pulseSec:pulseSec,
+    checkDelaySec:checkDelaySec
   };
   fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify(data)}).then(r=>r.json()).then(d=>{
@@ -464,6 +519,13 @@ function saveConfig(){
 }
 
 function saveSchedules(){
+  const pulseSec=+document.getElementById('c-pulsesec').value||currentPulseSec;
+  const minDuration=Math.max(10,pulseSec);
+  if(pulseSec<5||pulseSec>120){
+    toast('Thời gian mỗi xung phải từ 5 đến 120 giây',false);
+    return;
+  }
+
   const scheds=[];
   for(let i=0;i<4;i++){
     const enabled=document.getElementById('sch-en-'+i).checked?1:0;
@@ -486,8 +548,12 @@ function saveSchedules(){
       return;
     }
 
-    if(duration<10||duration>600){
-      toast('Lịch '+(i+1)+': Thời lượng phải từ 10 đến 600 giây',false);
+    if(duration<minDuration||duration>600){
+      toast('Lịch '+(i+1)+': Thời lượng phải từ '+minDuration+' đến 600 giây',false);
+      return;
+    }
+    if(duration%pulseSec!==0){
+      toast('Lịch '+(i+1)+': Thời lượng phải là bội số của '+pulseSec+' giây',false);
       return;
     }
 
@@ -501,7 +567,13 @@ function saveSchedules(){
   }
   fetch('/api/schedule',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({schedules:scheds})}).then(r=>r.json()).then(d=>{
-    if(d.ok)toast('Lưu lịch tưới thành công!',true);
+    if(d.ok){
+      latestSchedules=scheds;
+      lastScheduleSig=JSON.stringify({pulseSec:currentPulseSec,schedules:latestSchedules});
+      renderSchedules(latestSchedules);
+      toast('Lưu lịch tưới thành công!',true);
+      setTimeout(fetchStatus,300);
+    }
     else toast('Lỗi: '+d.msg,false);
   }).catch(()=>toast('Lỗi kết nối',false));
 }

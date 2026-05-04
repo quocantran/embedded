@@ -197,7 +197,9 @@ void WebServerManager::_handleGetStatus(AsyncWebServerRequest *request) {
     doc["maxPump"] = cfg.maxPumpTimeMin;
     doc["budget"] = cfg.dailyWaterBudget;
     doc["cooldown"] = cfg.cooldownMinutes;
-    doc["manTimeout"] = cfg.manualTimeoutMin;
+    doc["manTimeoutSec"] = cfg.manualTimeoutSec;
+    doc["pulseSec"] = cfg.wateringPulseSec;
+    doc["checkDelaySec"] = cfg.wateringCheckDelaySec;
     doc["calDry"] = cfg.soilDryRaw;
     doc["calWet"] = cfg.soilWetRaw;
 
@@ -240,7 +242,55 @@ void WebServerManager::_handlePostConfig(AsyncWebServerRequest *request) {
     if (doc["maxPump"].is<int>())    cfg.maxPumpTimeMin = doc["maxPump"];
     if (doc["budget"].is<int>())     cfg.dailyWaterBudget = doc["budget"];
     if (doc["cooldown"].is<int>())   cfg.cooldownMinutes = doc["cooldown"];
-    if (doc["manTimeout"].is<int>()) cfg.manualTimeoutMin = doc["manTimeout"];
+    if (doc["manTimeoutSec"].is<int>()) {
+        int timeoutSec = doc["manTimeoutSec"];
+        if (timeoutSec < 1 || timeoutSec > 1800) {
+            request->send(400, "application/json",
+                          "{\"ok\":false,\"msg\":\"Thoát MANUAL phải từ 1 đến 1800 giây\"}");
+            return;
+        }
+        cfg.manualTimeoutSec = (uint16_t)timeoutSec;
+    } else if (doc["manTimeout"].is<int>()) {
+        // Tương thích ngược payload cũ (đơn vị phút).
+        int timeoutMin = doc["manTimeout"];
+        if (timeoutMin < 1 || timeoutMin > 30) {
+            request->send(400, "application/json",
+                          "{\"ok\":false,\"msg\":\"Thoát MANUAL phải từ 1 đến 30 phút\"}");
+            return;
+        }
+        cfg.manualTimeoutSec = (uint16_t)timeoutMin * 60U;
+    }
+    if (doc["pulseSec"].is<int>()) {
+        int pulseSec = doc["pulseSec"];
+        if (pulseSec < MIN_WATERING_PULSE_SEC || pulseSec > MAX_WATERING_PULSE_SEC) {
+            request->send(400, "application/json",
+                          "{\"ok\":false,\"msg\":\"Thoi gian moi xung phai tu 5 den 120 giay\"}");
+            return;
+        }
+
+        ScheduleEntry *existingSchedules = _sm->getConfigManager().getSchedules();
+        for (int i = 0; i < MAX_SCHEDULES; i++) {
+            if (existingSchedules[i].enabled &&
+                existingSchedules[i].durationSec > 0 &&
+                (existingSchedules[i].durationSec % pulseSec) != 0) {
+                request->send(400, "application/json",
+                              "{\"ok\":false,\"msg\":\"Co lich khong chia het cho thoi gian xung moi. Hay cap nhat lich truoc.\"}");
+                return;
+            }
+        }
+
+        cfg.wateringPulseSec = (uint16_t)pulseSec;
+    }
+    if (doc["checkDelaySec"].is<int>()) {
+        int checkDelaySec = doc["checkDelaySec"];
+        if (checkDelaySec < MIN_WATERING_CHECK_DELAY_SEC ||
+            checkDelaySec > MAX_WATERING_CHECK_DELAY_SEC) {
+            request->send(400, "application/json",
+                          "{\"ok\":false,\"msg\":\"Thoi gian nghi giua xung phai tu 1 den 120 giay\"}");
+            return;
+        }
+        cfg.wateringCheckDelaySec = (uint16_t)checkDelaySec;
+    }
 
     if (cfg.soilThresholdLow >= cfg.soilThresholdHigh) {
         request->send(400, "application/json", 
@@ -271,6 +321,11 @@ void WebServerManager::_handlePostSchedule(AsyncWebServerRequest *request) {
     }
 
     ScheduleEntry *schedules = _sm->getConfigManager().getSchedules();
+    const SystemConfig &cfg = _sm->getConfigManager().getConfig();
+    uint16_t pulseSec = cfg.wateringPulseSec;
+    if (pulseSec < MIN_WATERING_PULSE_SEC || pulseSec > MAX_WATERING_PULSE_SEC) {
+        pulseSec = DEFAULT_WATERING_PULSE_SEC;
+    }
     JsonArray schArr = doc["schedules"];
 
     for (int i = 0; i < MAX_SCHEDULES && i < (int)schArr.size(); i++) {
@@ -292,6 +347,11 @@ void WebServerManager::_handlePostSchedule(AsyncWebServerRequest *request) {
                           "{\"ok\":false,\"msg\":\"Thời lượng lịch phải từ 10 đến 600 giây\"}");
             return;
         }
+        if ((duration % pulseSec) != 0) {
+            request->send(400, "application/json",
+                          "{\"ok\":false,\"msg\":\"Thoi luong lich phai la boi so cua thoi gian xung\"}");
+            return;
+        }
 
         if (enabled && ((days & 0x7F) == 0)) {
             request->send(400, "application/json",
@@ -307,6 +367,20 @@ void WebServerManager::_handlePostSchedule(AsyncWebServerRequest *request) {
     }
 
     _sm->getConfigManager().saveSchedules();
+
+    bool hasSchedule = false;
+    for (int i = 0; i < MAX_SCHEDULES; i++) {
+        if (schedules[i].enabled &&
+            schedules[i].durationSec > 0 &&
+            (schedules[i].daysMask & 0x7F) != 0) {
+            hasSchedule = true;
+            break;
+        }
+    }
+    if (!hasSchedule && _sm->getStatus().mode == OperationMode::SCHEDULE) {
+        _sm->requestModeChange(OperationMode::AUTO);
+        Serial.println(F("[WEB] Tat het lich khi dang SCHEDULE -> yeu cau ve AUTO"));
+    }
 
     Serial.println(F("[WEB] Cap nhat lich tuoi tu web"));
     request->send(200, "application/json", "{\"ok\":true}");
@@ -333,6 +407,24 @@ void WebServerManager::_handlePostMode(AsyncWebServerRequest *request) {
         request->send(400, "application/json", 
                       "{\"ok\":false,\"msg\":\"Chế độ không hợp lệ (0-2)\"}");
         return;
+    }
+
+    if (mode == (int)OperationMode::SCHEDULE) {
+        ScheduleEntry *schedules = _sm->getConfigManager().getSchedules();
+        bool hasSchedule = false;
+        for (int i = 0; i < MAX_SCHEDULES; i++) {
+            if (schedules[i].enabled &&
+                schedules[i].durationSec > 0 &&
+                (schedules[i].daysMask & 0x7F) != 0) {
+                hasSchedule = true;
+                break;
+            }
+        }
+        if (!hasSchedule) {
+            request->send(400, "application/json",
+                          "{\"ok\":false,\"msg\":\"Vui long cau hinh lich tuoi truoc\"}");
+            return;
+        }
     }
 
     _sm->requestModeChange((OperationMode)mode);

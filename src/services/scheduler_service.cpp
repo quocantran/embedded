@@ -50,14 +50,19 @@ IrrigationDecision SchedulerService::checkSchedules(
                 continue;
             }
 
-            // Tính số xung progressive
-            uint8_t pulses = adjustedSec / WATERING_PULSE_SEC;
+            // Tính số xung progressive theo cấu hình thời gian mỗi xung
+            uint16_t pulseSec = config.wateringPulseSec;
+            if (pulseSec < MIN_WATERING_PULSE_SEC || pulseSec > MAX_WATERING_PULSE_SEC) {
+                pulseSec = DEFAULT_WATERING_PULSE_SEC;
+            }
+            uint8_t pulses = adjustedSec / pulseSec;
+            if (adjustedSec % pulseSec != 0) pulses++;
             if (pulses == 0) pulses = 1;
 
             decision.shouldWater = true;
-            decision.durationSec = adjustedSec;
+            decision.durationSec = (uint16_t)pulses * pulseSec;
             decision.targetPulses = pulses;
-            decision.reason = "Lich #" + String(i) + " → " + String(adjustedSec) + 
+            decision.reason = "Lich #" + String(i) + " -> " + String(decision.durationSec) +
                              "s (" + String(pulses) + " xung)";
 
             // Xác định mức độ
@@ -66,7 +71,8 @@ IrrigationDecision SchedulerService::checkSchedules(
             else decision.level = WateringLevel::SHORT;
 
             _triggered[i] = true;
-            Serial.printf("[LICH] Tuoi %d giay (%d xung)\n", adjustedSec, pulses);
+            Serial.printf("[LICH] Tuoi %d giay (%d xung, %d giay/xung)\n",
+                          decision.durationSec, pulses, pulseSec);
             return decision; // Chỉ xử lý 1 lịch tại 1 thời điểm
         }
     }

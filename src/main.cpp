@@ -32,6 +32,7 @@ void setup() {
     if (ip.length() > 0) {
         // WiFi kết nối OK → đồng bộ giờ NTP
         Serial.printf("[MAIN] Web: http://%s\n", ip.c_str());
+        stateMachine.showWebAddress(ip);
 
         // --- Bước 3: Đồng bộ NTP → cập nhật RTC chip ---
         if (stateMachine.getRtcDriver().syncFromNTP()) {
@@ -41,6 +42,7 @@ void setup() {
         }
     } else {
         Serial.println(F("[MAIN] WiFi loi - chay OFFLINE (khong co web, dung gio RTC cu)"));
+        stateMachine.showWebAddress("");
     }
 
     Serial.println(F("\n[MAIN] ========== HE THONG SAN SANG ==========\n"));

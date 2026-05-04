@@ -15,14 +15,11 @@ IrrigationDecision IrrigationService::evaluate(
     decision.targetPulses = 0;
     decision.reason = "";
 
-    // ─── Kiểm tra 1: Cảm biến có hợp lệ không? ───
     if (!sensors.soilValid) {
         decision.reason = "Cam bien dat loi - khong tuoi";
         return decision;
     }
 
-    // ─── Kiểm tra 2: Hysteresis ───
-    // Nếu đất > ngưỡng cao → CHẮC CHẮN không tưới
     if (sensors.soilPercent >= config.soilThresholdHigh) {
         _wasWatering = false;
         decision.reason = "Dat du am (" + String(sensors.soilPercent) + 
@@ -36,7 +33,6 @@ IrrigationDecision IrrigationService::evaluate(
         return decision;
     }
 
-    // ─── Kiểm tra 3: Cooldown ───
     // Nếu đất quá khô ở mức nguy hiểm, cho phép bỏ qua cooldown
     bool criticalDry = (sensors.soilPercent <= config.dangerThreshold);
     if (sensors.rtcValid && lastWateringTime > 0 && currentUnixTime > 0) {
@@ -51,7 +47,6 @@ IrrigationDecision IrrigationService::evaluate(
         }
     }
 
-    // ─── Kiểm tra 4: Ngân sách nước hàng ngày ───
     if (todayWaterUsed >= config.dailyWaterBudget) {
         decision.reason = "Het ngan sach nuoc hom nay (" + 
                          String(todayWaterUsed) + "/" + 
@@ -59,7 +54,6 @@ IrrigationDecision IrrigationService::evaluate(
         return decision;
     }
 
-    // ─── Kiểm tra 5: Giờ tưới (tránh giữa trưa) ───
     if (sensors.rtcValid && _isNoonPeriod(sensors.hour)) {
         decision.shouldWater = false;
         decision.level = WateringLevel::DEFER;
@@ -80,16 +74,20 @@ IrrigationDecision IrrigationService::evaluate(
         return decision;
     }
 
-    // ─── Tính thời gian tưới và số xung ───
-    uint8_t pulses = _levelToPulses(level);
-    uint16_t duration = pulses * WATERING_PULSE_SEC;
+    uint16_t pulseSec = config.wateringPulseSec;
+    if (pulseSec < MIN_WATERING_PULSE_SEC || pulseSec > MAX_WATERING_PULSE_SEC) {
+        pulseSec = DEFAULT_WATERING_PULSE_SEC;
+    }
 
-    // Giới hạn bởi ngân sách còn lại
+    uint8_t pulses = _levelToPulses(level);
+    uint16_t duration = pulses * pulseSec;
+
     uint16_t budgetLeft = config.dailyWaterBudget - todayWaterUsed;
     if (duration > budgetLeft) {
         duration = budgetLeft;
-        pulses = duration / WATERING_PULSE_SEC;
+        pulses = duration / pulseSec;
         if (pulses == 0) pulses = 1; // Tối thiểu 1 xung
+        duration = pulses * pulseSec;
     }
 
     decision.shouldWater = true;
@@ -108,14 +106,12 @@ IrrigationDecision IrrigationService::evaluate(
 bool IrrigationService::checkHysteresis(int soilPercent, uint8_t lowThresh,
                                          uint8_t highThresh, bool currentlyWatering) {
     if (soilPercent < lowThresh) {
-        // Dưới ngưỡng thấp → NÊN tưới
         return true;
     }
     if (soilPercent >= highThresh) {
-        // Trên ngưỡng cao → KHÔNG tưới
         return false;
     }
-    // Giữa 2 ngưỡng → giữ nguyên trạng thái
+    // Giữa 2 ngưỡng giữ nguyên trạng thái
     return currentlyWatering;
 }
 
@@ -137,7 +133,6 @@ WateringLevel IrrigationService::_calculateLevel(int soilPercent, float temperat
     // ─── Đất RẤT khô (< 20%) ───
     if (soilPercent < 20) {
         if (temperature > 35.0f && humidity < 40.0f) {
-            // Nóng + khô → tưới DÀI
             return WateringLevel::LONG;
         }
         if (temperature > 30.0f) {
@@ -147,29 +142,24 @@ WateringLevel IrrigationService::_calculateLevel(int soilPercent, float temperat
         return WateringLevel::MEDIUM;
     }
 
-    // ─── Đất khô vừa (20% - ngưỡng thấp) ───
     if (soilPercent < 40) {
         if (humidity > 70.0f) {
-            // Ẩm KK cao → tưới NGẮN (nước bay hơi chậm)
             return WateringLevel::SHORT;
         }
         if (temperature > 30.0f && humidity < 50.0f) {
-            // Nóng + khô KK → tưới VỪA
             return WateringLevel::MEDIUM;
         }
-        // Điều kiện trung bình
         return WateringLevel::SHORT;
     }
 
-    // ─── Đất ẩm vừa (>= 40%) → không cần tưới ───
     return WateringLevel::NONE;
 }
 
 uint8_t IrrigationService::_levelToPulses(WateringLevel level) {
     switch (level) {
-        case WateringLevel::SHORT:  return 2;   // 2 × 30s = 60s
-        case WateringLevel::MEDIUM: return 3;   // 3 × 30s = 90s
-        case WateringLevel::LONG:   return 6;   // 6 × 30s = 180s
+        case WateringLevel::SHORT:  return 2;
+        case WateringLevel::MEDIUM: return 3;
+        case WateringLevel::LONG:   return 6; 
         default:                    return 0;
     }
 }

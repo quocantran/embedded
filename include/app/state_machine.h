@@ -34,6 +34,7 @@ public:
     RtcDriver& getRtcDriver();
 
     void showBootScreen();
+    void showWebAddress(const String &ipAddress);
 
 private:
     // ─── Trạng thái ───
@@ -72,6 +73,8 @@ private:
     unsigned long _manualDangerStartTime = 0; // Bắt đầu đếm đất nguy hiểm trong MANUAL
     unsigned long _errorStartTime = 0;      // Thời điểm vào ERROR
     unsigned long _lastEepromSave = 0;      // Thời điểm lưu EEPROM cuối
+    unsigned long _scheduleAutoFallbackAt = 0; // Hẹn giờ tự về AUTO khi SCHEDULE chưa có lịch
+    bool _scheduleAutoFallbackPending = false;
 
     // ─── Progressive Watering ───
     WateringSubState _waterSubState = WateringSubState::COMPLETE;
@@ -101,6 +104,8 @@ private:
 
     // ─── Chuyển trạng thái với logging ───
     void _setState(SystemState newState);
+
+    bool _hasConfiguredSchedule();
 };
 
 #endif // STATE_MACHINE_H

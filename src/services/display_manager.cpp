@@ -67,7 +67,7 @@ void DisplayManager::_showMain(const SensorData &sensors, OperationMode mode) {
     line0 += "  ";
 
     if (sensors.dhtValid) {
-        line0 += String((int)sensors.temperature) + "\xDF" "C"; // \xDF = ° trên LCD
+        line0 += String(sensors.temperature, 1) + "\xDF" "C"; // \xDF = ° trên LCD
     } else {
         line0 += "--\xDF" "C";
     }

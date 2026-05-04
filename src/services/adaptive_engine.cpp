@@ -38,7 +38,7 @@ uint16_t AdaptiveEngine::adjustDuration(uint16_t requestedSec,
         uint16_t adjusted = (uint16_t)(requestedSec * 0.8f);
         Serial.printf("[THICH UNG] Dat phan hoi tot → giam %ds → %ds\n", 
                       requestedSec, adjusted);
-        return max(adjusted, (uint16_t)WATERING_PULSE_SEC); // Tối thiểu 1 xung
+        return max(adjusted, (uint16_t)DEFAULT_WATERING_PULSE_SEC); // Tối thiểu 1 xung
     }
 
     // Nếu đất phản hồi kém (rate < 0.1%/s) → tăng 30% thời gian

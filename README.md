@@ -84,7 +84,7 @@ Các hằng số nằm trong `include/config.h`:
 - MANUAL danger timeout mặc định: 1 phút
 - NTP: `pool.ntp.org`, GMT+7
 
-WiFi hiện tại chạy Station mode với cấu hình trong `config.h`:
+WiFi chạy Station mode. Giá trị mặc định ở `config.h`:
 
 - `WIFI_STA_SSID`
 - `WIFI_STA_PASS`
@@ -210,7 +210,7 @@ Thứ tự đánh giá trong code:
 
 An toàn trong MANUAL:
 
-1. Nếu đất <= dangerThreshold liên tục quá `manualTimeoutMin` -> tắt bơm và về AUTO
+1. Nếu đất <= dangerThreshold liên tục quá `manualTimeoutSec` -> tắt bơm và về AUTO
 2. Nếu bơm quá `maxPumpTimeMin` -> tắt bơm, vào ERROR
 3. Nếu đất đã đủ ẩm (>= high) và bơm đang chạy -> tắt bơm
 
@@ -321,11 +321,15 @@ Truy cập:
 
 `/api/config`:
 - `low < high` bắt buộc
+- `pulseSec` trong khoảng 5..120 giây
+- `checkDelaySec` trong khoảng 1..120 giây
+- Đổi `pulseSec` sẽ bị từ chối nếu có lịch bật không chia hết cho `pulseSec`
 
 `/api/schedule`:
 - `hour` 0..23
 - `minute` 0..59
 - `duration` 10..600 giây
+- `duration` phải là bội số của `pulseSec`
 - Lịch bật phải có ít nhất 1 ngày
 
 `/api/calibrate`:

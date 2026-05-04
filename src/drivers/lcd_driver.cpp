@@ -24,7 +24,6 @@ void LcdDriver::printAt(uint8_t col, uint8_t row, const String &text) {
 void LcdDriver::printLine(uint8_t row, const String &text) {
     if (row > 1) return;
 
-    // Cắt chuỗi nếu dài hơn 16 ký tự
     String padded = text;
     while (padded.length() < LCD_COLS) {
         padded += ' '; // Pad khoảng trắng để xóa ký tự thừa từ nội dung cũ
